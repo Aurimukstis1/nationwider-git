@@ -12,6 +12,7 @@ import time
 import os
 import multiprocessing
 import concurrent.futures as futuress
+import chunk_gpu as cgpu
 # display settings; ts pmo fr rn 
 WIDTH, HEIGHT = 1920, 1080
 SCREEN_SIZE = (WIDTH, HEIGHT)
@@ -120,21 +121,29 @@ class Game(arcade.Window):
         # < - DEFINING GRIDS FOR ALL LAYERS #GRIDS
         print("?- setting up grid layers ...")
         self.political_layer        = na.GridLayer((600,300)   ,20)
-        print("[1/5]:self.political_layer")
+        print("[1/6]:self.political_layer")
         self.upper_terrain_layer    = na.GridLayer((600,300)   ,20)
-        print("[2/5]:self.upper_terrain_layer")
+        print("[2/6]:self.upper_terrain_layer")
         self.lower_terrain_layer    = na.GridLayer((12000,6000),1 )
-        print("[3/5]:self.lower_terrain_layer")
+        print("[3/6]:self.lower_terrain_layer")
 
         self.s_political_layer      = na.GridLayer((600,300)   ,20)
-        print("[4/5]:self.s_political_layer")
+        print("[4/6]:self.s_political_layer")
         self.s_upper_terrain_layer  = na.GridLayer((600,300)   ,20)
-        print("[5/5]:self.s_upper_terrain_layer")
+        print("[5/6]:self.s_upper_terrain_layer")
+        self.s_lower_terrain_layer  = na.GridLayer((12000,6000),1 )
+        print("[6/6]:self.s_lower_terrain_layer")
         self.icons = {
             'locations': [],
             'lines': []
         }
         print("O- grids set up / icons dict initialized")
+
+        epalette = [random.randint(0, 255) for _ in range(256 * 4)]
+        etiles = [random.randint(0, 255) for _ in range(12000 * 6000)]
+        self.color_chunk = cgpu.ColorChunk(
+            pos=(0,0), ctx=self.ctx, size=(12000, 6000), colors=bytes(epalette), data=bytes(etiles)
+        )
 
         keybinds_anchor = self.ui.add(arcade.gui.UIAnchorLayout())
         self.keybinds_box = keybinds_anchor.add(arcade.gui.UIBoxLayout(space_between=0), anchor_x="center", anchor_y="center")
@@ -426,85 +435,165 @@ class Game(arcade.Window):
     def on_clicked_load(self, filename: str):
         loaded_data = np.load(filename,allow_pickle=True)
         print(f"I- loading {filename}")
-        loaded_a_data                   = loaded_data['a']
-        self.upper_terrain_layer.grid[:]= loaded_a_data
 
-        loaded_b_data                   = loaded_data['b']
-        self.political_layer.grid[:]    = loaded_b_data
+        # ---
 
-        loaded_c_data                   = loaded_data['c']
-        self.lower_terrain_layer.grid[:]= loaded_c_data
+        try:
+            loaded_a_data                   = loaded_data['a']
+            self.upper_terrain_layer.grid[:]= loaded_a_data
+        except:
+            print("X- no a definition? skipping.")
 
-        loaded_a_s_data                 = loaded_data['a_s']
-        self.s_upper_terrain_layer.grid[:]=loaded_a_s_data
+        try:
+            loaded_b_data                   = loaded_data['b']
+            self.political_layer.grid[:]    = loaded_b_data
+        except:
+            print("X- no b definition? skipping.")
 
-        loaded_b_s_data                 = loaded_data['b_s']
-        self.s_political_layer.grid[:]  = loaded_b_s_data
+        try:
+            loaded_c_data                   = loaded_data['c']
+            self.lower_terrain_layer.grid[:]= loaded_c_data
+        except:
+            print("X- no c definition? skipping.")
 
-        icons_array                     = loaded_data['cc']
-        self.icons = icons_array.item()
+        # ---
+        try:
+            loaded_a_s_data                 = loaded_data['a_s']
+            self.s_upper_terrain_layer.grid[:]=loaded_a_s_data
+        except:
+            print("X- no a_s definition? skipping.")
+
+        try:
+            loaded_b_s_data                 = loaded_data['b_s']
+            self.s_political_layer.grid[:]  = loaded_b_s_data
+        except:
+            print("X- no b_s definition? skipping.")
+
+        try:
+            loaded_c_s_data                 = loaded_data['c_s']
+            self.s_lower_terrain_layer.grid[:]=loaded_c_s_data
+        except:
+            print("X- no c_s definition? skipping.")
+
+        # ---
+
+        try:
+            icons_array                     = loaded_data['cc']
+            self.icons = icons_array.item()
+        except:
+            print("x- no icons list? skipping.")
 
         self.setup()
 
     def on_clicked_save(self):
         try:
             self.on_notification_toast("Trying to save map ...")
-            a_grid = np.empty((600,300),dtype=np.uint8)
-            a_grid = np.empty((600,300),dtype=np.uint8)
-            c_grid = np.empty((12000, 6000), dtype=np.uint8)
+            a_grid = np.empty((600,300),    dtype=np.uint8)
+            a_grid = np.empty((600,300),    dtype=np.uint8)
+            c_grid = np.empty((12000,6000), dtype=np.uint8)
+            a_s_grid=np.empty((600,300),    dtype=np.uint8)
+            b_s_grid=np.empty((600,300),    dtype=np.uint8)
+            c_s_grid=np.empty((12000,6000), dtype=np.uint8)
 
-            def extract_id(cell):
-                return cell.id_ if isinstance(cell, na.Tile) else cell
-            
-            def extract_country_id(cell):
-                return cell.id_ if isinstance(cell, na.Tile) else cell
-            
-            extract_attribute_biome = np.vectorize(extract_id, otypes=[np.uint8])
-            extract_attribute_country = np.vectorize(extract_country_id, otypes=[np.uint8])
-            a_grid = extract_attribute_biome(self.upper_terrain_layer.grid)
-            b_grid = extract_attribute_country(self.political_layer.grid)
-            c_grid = extract_attribute_biome(self.lower_terrain_layer.grid)
+            def extract_id_optimized(grid):
+                # Create a mask for where elements are instances of `na.Tile`
+                is_tile = np.vectorize(lambda x: isinstance(x, na.Tile))(grid)
 
-            a_s_grid = extract_attribute_biome(self.s_upper_terrain_layer.grid)
-            b_s_grid = extract_attribute_country(self.s_political_layer.grid)
-            np.savez_compressed(f"map_data/{time.localtime().tm_year}_{time.localtime().tm_mon}_{time.localtime().tm_mday}_{time.localtime().tm_hour}_{time.localtime().tm_min}_{time.localtime().tm_sec}.npz",
+                # Initialize the result with the grid values (to handle non-tile elements)
+                result = np.copy(grid)
+                
+                # Handle the case where the element is a Tile and extract the id_
+                result[is_tile] = np.array([cell.id_ for cell in grid[is_tile]])
+
+                # Handle the case for `None` (replace with 255)
+                result[grid == None] = 255
+
+                # Handle the case for 0 values (replace with 0)
+                result[grid == 0] = 0
+
+                return result
+            
+            def extract_country_id_optimized(grid):
+                # Create a mask for where elements are instances of `na.Tile`
+                is_tile = np.vectorize(lambda x: isinstance(x, na.Tile))(grid)
+                
+                # Initialize the result with the grid values (to handle non-tile elements)
+                result = np.copy(grid)
+                
+                # Handle the case where the element is a Tile and extract the id_
+                result[is_tile] = np.array([cell.id_ for cell in grid[is_tile]])
+
+                return result
+
+            #extract_attribute_biome = np.vectorize(extract_id, otypes=[np.uint8])
+            #extract_attribute_country = np.vectorize(extract_country_id, otypes=[np.uint8])
+
+            print("?- converting northern hemisphere ...")
+            timer = time.time()
+            a_grid = extract_id_optimized(self.upper_terrain_layer.grid); print("...")
+            b_grid = extract_country_id_optimized(self.political_layer.grid); print("...")
+            c_grid = extract_id_optimized(self.lower_terrain_layer.grid); print("...")
+            time_taken = time.time()-timer
+            print(f"O- converted, took {round(time_taken,3)}s")
+
+            print("?- converting southern hemisphere ...")
+            timer = time.time()
+            a_s_grid = extract_id_optimized(self.s_upper_terrain_layer.grid); print("...")
+            b_s_grid = extract_country_id_optimized(self.s_political_layer.grid); print("...")
+            c_s_grid = extract_id_optimized(self.s_lower_terrain_layer.grid); print("...")
+            print(f"O- converted, took {round(time_taken,3)}s")
+
+            print("?- trying np.savez_compressed ...")
+            timer = time.time()
+            np.savez_compressed(f"map_data/n_{time.localtime().tm_year}_{time.localtime().tm_mon}_{time.localtime().tm_mday}_{time.localtime().tm_hour}_{time.localtime().tm_min}_{time.localtime().tm_sec}.npz",
                                 a=a_grid,
                                 b=b_grid,
                                 c=c_grid,
                                 a_s=a_s_grid,
                                 b_s=b_s_grid,
+                                c_s=c_s_grid,
                                 cc=np.array(self.icons)
                                 )
-            self.on_notification_toast(f"{type(self.lower_terrain_layer.grid)}",warn=True)
-            self.on_notification_toast(f"{type(self.upper_terrain_layer.grid)}",warn=True)
-            self.on_notification_toast(f"{type(self.political_layer.grid)}",warn=True)
-            self.on_notification_toast(f"{type(self.s_upper_terrain_layer.grid)}",warn=True)
-            self.on_notification_toast(f"{type(self.s_political_layer.grid)}",warn=True)
-            self.on_notification_toast("Saved map ...")
+            time_taken = time.time()-timer
+            self.on_notification_toast(f"O- map has been saved, took: {round(time_taken,3)} s")
         except Exception as e: 
             self.on_notification_toast("Failed to save map ... "+str(e),error=True)
 
-    def background_loader(self, chunk_queue, result_queue, grid):
+    def background_loader(self, chunk_queue, result_queue):
         while True:
             chunk_position = chunk_queue.get()
             if chunk_position is None:
                 break
 
             tilex, tiley = chunk_position
-            returned_spritelist = self.load_chunk(tilex, tiley, 20, grid)
+            returned_spritelist = self.load_chunk(tilex, tiley, 20)
             
             # Add to result queue
             result_queue.put((tilex, tiley, returned_spritelist))
             chunk_queue.task_done()
-
-    def load_chunk(self, tilex: int, tiley: int, tiles_per_chunk: int, grid) -> list:
+    
+    def load_chunk(self, tilex: int, tiley: int, tiles_per_chunk: int) -> list:
         chunk_spritelist = []
+        if tiley < 0:
+            grid = self.s_lower_terrain_layer.grid
+        else:
+            grid = self.lower_terrain_layer.grid
+
         chunk_data = np.zeros((tiles_per_chunk,tiles_per_chunk),dtype=np.uint8)
         for _x_ in range(tiles_per_chunk):
             for _y_ in range(tiles_per_chunk):
-                chunk_data[_x_][_y_] = grid[_x_+tilex*tiles_per_chunk][_y_+tiley*tiles_per_chunk]
+                if not tiley < 0:
+                    tuple_pos = (_x_ + tilex * tiles_per_chunk, _y_ + tiley * tiles_per_chunk)
+                    returned = grid.__getitem__(tuple_pos)
+                    if returned is None: returned = 255
+                    chunk_data[_x_][_y_] = returned
+                else:
+                    tuple_pos =(_x_ + tilex * tiles_per_chunk, _y_ + (300-abs(tiley)) * tiles_per_chunk)
+                    returned = grid.__getitem__(tuple_pos)
+                    if returned is None: returned = 255
+                    chunk_data[_x_][_y_] = returned
 
-        for x in range(tiles_per_chunk):
+        for x in range(tiles_per_chunk):    
             for y in range(tiles_per_chunk):
                 try:
                     id_ = chunk_data[x][y]
@@ -515,7 +604,8 @@ class Game(arcade.Window):
                     else:
                         pixel_rgba = na.TILE_ID_MAP.get(id_, (0, 0, 0)) + (255,)
 
-                    tile = na.Tile(1, 1, world_x-9.5, world_y-9.5, pixel_rgba, id_)
+                    tile = na.Tile(1, world_x-9.5, world_y-9.5, id_)
+                    tile.color = pixel_rgba
                     chunk_spritelist.append(tile)
 
                     grid[world_x][world_y] = tile
@@ -527,7 +617,7 @@ class Game(arcade.Window):
 
     def process_completed_chunks(self):
         try:
-            for _ in range(1):
+            for _ in range(8):
                 if self.chunk_result_queue.empty():
                     break
                     
@@ -595,53 +685,53 @@ class Game(arcade.Window):
             self.info_scene_list.append(icon_object)
 
         # --- generating the hemispheres
-        # north_tiles_list = na.compute_tiles(self.upper_terrain_layer,self.political_layer,0,600,0,300,0,"north",precomputed_terrain_colors,precomputed_political_colors)
-        # south_tiles_list = na.compute_tiles(self.s_upper_terrain_layer,self.s_political_layer,0,600,0,300,-6000,"south",precomputed_terrain_colors,precomputed_political_colors)
+        north_tiles_list = na.compute_tiles(self.upper_terrain_layer,self.political_layer,0,600,0,300,"north")
+        south_tiles_list = na.compute_tiles(self.s_upper_terrain_layer,self.s_political_layer,0,600,0,300,"south")
 
-        # print("?- adding precomputed north map tiles [2/3] ...")
-        # for tile, political_tile, x, y in north_tiles_list:
-        #     self.terrain_scene.add_sprite("1", tile)
-        #     self.political_scene.add_sprite("0", political_tile)
-        #     self.upper_terrain_layer.grid[x][y] = tile
-        #     self.political_layer.grid[x][y] = political_tile
+        print("?- adding precomputed north map tiles [2/3] ...")
+        for tile, political_tile, x, y in north_tiles_list:
+            self.terrain_scene.add_sprite("1", tile)
+            self.political_scene.add_sprite("0", political_tile)
+            self.upper_terrain_layer.grid[x][y] = tile
+            self.political_layer.grid[x][y] = political_tile
 
-        # print("?- adding precomputed south map tiles [3/3] ...")
-        # for tile, political_tile, x, y in south_tiles_list:
-        #     self.terrain_scene.add_sprite("1", tile)
-        #     self.political_scene.add_sprite("0", political_tile)
-        #     self.s_upper_terrain_layer.grid[x][y] = tile
-        #     self.s_political_layer.grid[x][y] = political_tile
+        print("?- adding precomputed south map tiles [3/3] ...")
+        for tile, political_tile, x, y in south_tiles_list:
+            self.terrain_scene.add_sprite("1", tile)
+            self.political_scene.add_sprite("0", political_tile)
+            self.s_upper_terrain_layer.grid[x][y] = tile
+            self.s_political_layer.grid[x][y] = political_tile
 
-        north_coord_sets = [
-            (0, 300, 0, 150),    # Northwest quadrant
-            (0, 300, 150, 300),  # Northeast quadrant
-            (300, 600, 0, 150),  # Southwest quadrant
-            (300, 600, 150, 300) # Southeast quadrant
-        ]
+        # north_coord_sets = [
+        #     (0, 300, 0, 150),    # Northwest quadrant
+        #     (0, 300, 150, 300),  # Northeast quadrant
+        #     (300, 600, 0, 150),  # Southwest quadrant
+        #     (300, 600, 150, 300) # Southeast quadrant
+        # ]
 
-        north_tiles_list = []
+        # north_tiles_list = []
 
-        with multiprocessing.Pool(processes=4, maxtasksperchild=1) as pool:
-            timer = time.time()
-            print("?- generating args for tiles ...")
-            args = [
-                (coords, self.upper_terrain_layer, self.political_layer, precomputed_terrain_colors, precomputed_political_colors, "north") 
-                for coords in north_coord_sets
-            ]
-            print("O- done, proceeding ...")
+        # with multiprocessing.Pool(processes=4, maxtasksperchild=1) as pool:
+        #     timer = time.time()
+        #     print("?- generating args for tiles ...")
+        #     args = [
+        #         (coords, self.upper_terrain_layer, self.political_layer, precomputed_terrain_colors, precomputed_political_colors, "north") 
+        #         for coords in north_coord_sets
+        #     ]
+        #     print("O- done, proceeding ...")
 
-            print("?- starting tile computation ...")
-            north_tiles_list = list(itertools.chain.from_iterable(
-                pool.starmap(na.compute_tiles_wrapper, args)
-            ))
-            print(f"O- pool exited at {round(time.time()-timer,2)}s")
+        #     print("?- starting tile computation ...")
+        #     north_tiles_list = list(itertools.chain.from_iterable(
+        #         pool.starmap(na.compute_tiles_wrapper, args)
+        #     ))
+        #     print(f"O- pool exited at {round(time.time()-timer,2)}s")
 
-            print("?- adding precomputed tiles ...")
-            for tile, political_tile, x, y in north_tiles_list:
-                self.terrain_scene.add_sprite("1", tile)
-                self.political_scene.add_sprite("0", political_tile)
-                self.lower_terrain_layer.grid[x][y] = tile
-                self.political_layer.grid[x][y] = political_tile
+        #     print("?- adding precomputed tiles ...")
+        #     for tile, political_tile, x, y in north_tiles_list:
+        #         self.terrain_scene.add_sprite("1", tile)
+        #         self.political_scene.add_sprite("0", political_tile)
+        #         self.lower_terrain_layer.grid[x][y] = tile
+        #         self.political_layer.grid[x][y] = political_tile
 
             # adding south map loading later idfk
 
@@ -687,9 +777,10 @@ class Game(arcade.Window):
 
         loader_thread = threading.Thread(
             target=self.background_loader, 
-            args=(self.chunk_request_queue, self.chunk_result_queue, self.lower_terrain_layer.grid), 
+            args=(self.chunk_request_queue, self.chunk_result_queue), 
             daemon=True
         )
+        
         print(f"?- Starting background thread : {loader_thread.name}")
         loader_thread.start()
         print(f"O- Started backgroun thread : {loader_thread.name}")
@@ -718,9 +809,9 @@ class Game(arcade.Window):
                 low_terrain.visible = False
 
             list_of_chunks = []
-            for a in range(6):
-                for b in range(6):
-                    camera_tile = (round(((self.camera.position.x/20)+a)-3),round(((self.camera.position.y/20)+b)-3))
+            for a in range(12):
+                for b in range(12):
+                    camera_tile = (round(((self.camera.position.x/20)+a)-6),round(((self.camera.position.y/20)+b)-6))
                     if not (camera_tile[0],camera_tile[1]) in self.requested_chunks:
                         list_of_chunks.append((camera_tile[0],camera_tile[1]))
                         self.requested_chunks.add((camera_tile[0],camera_tile[1]))
@@ -787,6 +878,7 @@ class Game(arcade.Window):
                 arcade.draw_circle_outline(self.current_position_world[0],self.current_position_world[1],2,(255,255,255,255),0.2,0,-1)
         
         self.ui.draw()
+        self.color_chunk.draw()
 
     def on_key_press(self, symbol, modifier):
         if symbol   == arcade.key.W or symbol == arcade.key.UP:
@@ -923,11 +1015,17 @@ class Game(arcade.Window):
                         target_positions = []
                         for rel_x, rel_y in coordinates:
                             x_pos = round(world_x + (rel_x - center_x) + 9.5)
-                            y_pos = round(world_y + (rel_y - center_y) + 9.5)
+                            if not world_y < 0:
+                                y_pos = round(world_y + (rel_y - center_y) + 9.5)
+                            else:
+                                y_pos = round(6000-abs(world_y) + (rel_y - center_y) + 9.5)
                             target_positions.append((x_pos, y_pos))
                         
                         for pos in target_positions:
-                            tile = self.lower_terrain_layer.__getitem__(pos)
+                            if not world_y < 0:
+                                tile = self.lower_terrain_layer.__getitem__(pos)
+                            else:
+                                tile = self.s_lower_terrain_layer.__getitem__(pos)
                             if tile is not None:
                                 tile.color = pixel_rgba
                                 tile.id_ = self.selected_lower_id
@@ -949,17 +1047,25 @@ class Game(arcade.Window):
 
                                 if not self.editing_mode_size == 1:
                                     if distance <= (radius + 0.5) ** 2:
-                                        list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
-                                        list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                        if not y_ < 0:
+                                            list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
+                                            list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                        else:
+                                            list_of_tiles[x_offset, y_offset] = self.s_lower_terrain_layer.__getitem__((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
+                                            list_of_tile_positions.append((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
                                     else:
                                         list_of_tiles[x_offset, y_offset] = None 
                                 else:
-                                    list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
-                                    list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                    if not y_ < 0:
+                                        list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
+                                        list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                    else:
+                                        list_of_tiles[x_offset, y_offset] = self.s_lower_terrain_layer.__getitem__((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
+                                        list_of_tile_positions.append((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
 
                         for x_ in range(self.editing_mode_size):
                             for y_ in range(self.editing_mode_size):
-                                if not list_of_tiles[x_][y_] is None:
+                                if list_of_tiles[x_][y_]:
                                     pixel_rgba = na.TILE_ID_MAP.get(self.selected_lower_id,(0,0,0)) + (255,)
                                     list_of_tiles[x_][y_].color = pixel_rgba
                                     list_of_tiles[x_][y_].id_ = self.selected_lower_id
@@ -1225,7 +1331,7 @@ class Game(arcade.Window):
                     if self.selected_brush:
                         coordinates = na.get_pixel_coordinates(self.selected_brush)
                         if not coordinates:
-                            print("No coordinates provided.")
+                            print("X- brush empty, passing")
                             return
                             
                         min_x = min(x for x, y in coordinates)
@@ -1241,16 +1347,22 @@ class Game(arcade.Window):
                         target_positions = []
                         for rel_x, rel_y in coordinates:
                             x_pos = round(world_x + (rel_x - center_x) + 9.5)
-                            y_pos = round(world_y + (rel_y - center_y) + 9.5)
+                            if not world_y < 0:
+                                y_pos = round(world_y + (rel_y - center_y) + 9.5)
+                            else:
+                                y_pos = round(6000-abs(world_y) + (rel_y - center_y) + 9.5)
                             target_positions.append((x_pos, y_pos))
                         
                         for pos in target_positions:
-                            tile = self.lower_terrain_layer.__getitem__(pos)
+                            if not world_y < 0:
+                                tile = self.lower_terrain_layer.__getitem__(pos)
+                            else:
+                                tile = self.s_lower_terrain_layer.__getitem__(pos)
                             if tile is not None:
                                 tile.color = pixel_rgba
                                 tile.id_ = self.selected_lower_id
                             else:
-                                print(f"No tile at position {pos}")
+                                print(f"X- no tile at position {pos}")
                     else:
                         list_of_tiles = np.zeros((self.editing_mode_size,self.editing_mode_size), dtype=object)
                         list_of_tile_positions = []
@@ -1267,13 +1379,21 @@ class Game(arcade.Window):
 
                                 if not self.editing_mode_size == 1:
                                     if distance <= (radius + 0.5) ** 2:
-                                        list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
-                                        list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                        if not y_ < 0:
+                                            list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
+                                            list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                        else:
+                                            list_of_tiles[x_offset, y_offset] = self.s_lower_terrain_layer.__getitem__((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
+                                            list_of_tile_positions.append((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
                                     else:
                                         list_of_tiles[x_offset, y_offset] = None 
                                 else:
-                                    list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
-                                    list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                    if not y_ < 0:
+                                        list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
+                                        list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                    else:
+                                        list_of_tiles[x_offset, y_offset] = self.s_lower_terrain_layer.__getitem__((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
+                                        list_of_tile_positions.append((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
 
                         for x_ in range(self.editing_mode_size):
                             for y_ in range(self.editing_mode_size):

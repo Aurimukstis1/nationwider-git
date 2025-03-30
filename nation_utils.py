@@ -7,6 +7,8 @@ import numpy
 import os
 from PIL import Image
 
+tile_texture = arcade.load_texture('local_data/sprite_texture.png')
+
 class Icon(arcade.Sprite):
     """An icon on the map using a texture."""
     def __init__(self, path_or_texture = None, scale = 1, center_x = 0, center_y = 0, angle = 0, icon_id = 0, angle_rot = 0, unique_id = 1000, country_id = 0, quality = 1, **kwargs):
@@ -31,10 +33,15 @@ class Toast(arcade.gui.UILabel):
         if self.time > self.duration:
             self.parent.remove(self)
 
-class Tile(arcade.SpriteSolidColor):
-    __slots__ = ('id_',)
-    def __init__(self, width, height, x, y, color, id_):
-        super().__init__(width, height, x, y, color=color)
+# class Tile(arcade.SpriteSolidColor):
+#     __slots__ = ('id_',)
+#     def __init__(self, width, height, x, y, color, id_):
+#         super().__init__(width, height, x, y, color=color)
+#         self.id_ = id_
+
+class Tile(arcade.BasicSprite):
+    def __init__(self, size = 1, center_x = 0, center_y = 0, id_ = 0, **kwargs):
+        super().__init__(texture=tile_texture, scale=size, center_x=center_x, center_y=center_y, visible=True, **kwargs)
         self.id_ = id_
 
 class GridLayer():
@@ -100,11 +107,11 @@ def compute_tiles_wrapper(coords, terrain_layer, political_layer, precomputed_te
     x_start, x_end, y_start, y_end = coords
     return compute_tiles(terrain_layer, political_layer, x_start, x_end, y_start, y_end, 0, direction, precomputed_terrain_colors, precomputed_political_colors)
 
-def compute_tiles(upper_layer, political_layer, x_start, x_end, y_start, y_end, offset_y, map_name, precomputed_terrain_colors, precomputed_political_colors):
+def compute_tiles(upper_layer, political_layer, x_start, x_end, y_start, y_end, map_name):
     print(f"?- precomputing {map_name} hemisphere {x_start,y_start} {x_start,x_end}")
-    offset_y_ = offset_y
+    offset_y_ = 0
     if map_name == "south":
-        offset_y_ = offset_y-6000
+        offset_y_ = -6000
     timee = time.time()
     temp_tiles = []
 
@@ -128,8 +135,10 @@ def compute_tiles(upper_layer, political_layer, x_start, x_end, y_start, y_end, 
             terrain_alpha = 0 if tile_id == 0 else 255
             political_alpha = 100 if tile_id == 0 else 255
 
-            tile = Tile(20, 20, world_x, world_y, (*precomputed_terrain_colors[tile_id], terrain_alpha), tile_id)
-            political_tile = Tile(20, 20, world_x, world_y, (*precomputed_political_colors[political_tile_id], political_alpha), political_tile_id)
+            tile = Tile(20, world_x, world_y, id_=tile_id)
+            tile.color = TILE_ID_MAP.get(tile_id,(255,255,255)) + (terrain_alpha,)
+            political_tile = Tile(20, world_x, world_y, id_=political_tile_id)
+            political_tile.color = POLITICAL_ID_MAP.get(political_tile_id,(255,255,255)) + (political_alpha,)
 
             temp_tiles.append((tile, political_tile, x, y))
 
