@@ -77,7 +77,7 @@ class ColorChunk:
         )
         self._program["color_texture"] = 0  # channel 0
         self._program["chunk_texture"] = 1  # channel 1
-        if data:
+        if data is not None:
             self.write(data)
         if colors:
             self.write_colors(colors)
@@ -105,10 +105,10 @@ class ColorChunk:
         """Write the color palette"""
         self._color_texture.write(data=colors)
 
-    def draw(self):
+    def draw(self, size):
         """Render the chunk"""
         self._program["position"] = self.pos
-        self._program["size"] = self.size
+        self._program["size"] = size
         self._color_texture.use(unit=0)
         self._texture.use(unit=1)
         self._quad.render(self._program)

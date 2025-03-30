@@ -173,8 +173,6 @@ def compute_lower_tiles(layer, x_start, x_end, y_start, y_end, terrain_colors):
 #---
 TILE_ID_MAP         = {
     255: (0, 0, 0),       # CLEAR TILE [ NONE ]
-    254: (53, 53, 53),    # POLITICAL LAND
-    253: (53, 53, 53),    # POLITICAL WATER
     0: (0, 0, 127),       # WATER
     1: (99, 173, 95),     # COLD PLAINS
     2: (52, 72, 40),      # BOREAL FOREST

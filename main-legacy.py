@@ -76,8 +76,6 @@ class Game(arcade.Window):
         self.selected_line          = None
         self.drawing_line_start     = None
         self.drawing_line_end       = None
-
-        self.has_map_been_loaded    = False
         print("O- variables set up")
 
         print("?- setting up view layers ...")
@@ -141,13 +139,11 @@ class Game(arcade.Window):
         }
         print("O- grids set up / icons dict initialized")
 
-        self.upper_terrain_layer_texture = None
-        self.lower_terrain_layer_texture = None
-        self.political_layer_texture     = None
-        
-        self.s_upper_terrain_layer_texture=None
-        self.s_lower_terrain_layer_texture=None
-        self.s_political_layer_texture    =None
+        epalette = [random.randint(0, 255) for _ in range(256 * 4)]
+        etiles = [random.randint(0, 255) for _ in range(12000 * 6000)]
+        self.color_chunk = cgpu.ColorChunk(
+            pos=(0,0), ctx=self.ctx, size=(12000, 6000), colors=bytes(epalette), data=bytes(etiles)
+        )
 
         keybinds_anchor = self.ui.add(arcade.gui.UIAnchorLayout())
         self.keybinds_box = keybinds_anchor.add(arcade.gui.UIBoxLayout(space_between=0), anchor_x="center", anchor_y="center")
@@ -563,6 +559,78 @@ class Game(arcade.Window):
         except Exception as e: 
             self.on_notification_toast("Failed to save map ... "+str(e),error=True)
 
+    def background_loader(self, chunk_queue, result_queue):
+        while True:
+            chunk_position = chunk_queue.get()
+            if chunk_position is None:
+                break
+
+            tilex, tiley = chunk_position
+            returned_spritelist = self.load_chunk(tilex, tiley, 20)
+            
+            # Add to result queue
+            result_queue.put((tilex, tiley, returned_spritelist))
+            chunk_queue.task_done()
+    
+    def load_chunk(self, tilex: int, tiley: int, tiles_per_chunk: int) -> list:
+        chunk_spritelist = []
+        if tiley < 0:
+            grid = self.s_lower_terrain_layer.grid
+        else:
+            grid = self.lower_terrain_layer.grid
+
+        chunk_data = np.zeros((tiles_per_chunk,tiles_per_chunk),dtype=np.uint8)
+        for _x_ in range(tiles_per_chunk):
+            for _y_ in range(tiles_per_chunk):
+                if not tiley < 0:
+                    tuple_pos = (_x_ + tilex * tiles_per_chunk, _y_ + tiley * tiles_per_chunk)
+                    returned = grid.__getitem__(tuple_pos)
+                    if returned is None: returned = 255
+                    chunk_data[_x_][_y_] = returned
+                else:
+                    tuple_pos =(_x_ + tilex * tiles_per_chunk, _y_ + (300-abs(tiley)) * tiles_per_chunk)
+                    returned = grid.__getitem__(tuple_pos)
+                    if returned is None: returned = 255
+                    chunk_data[_x_][_y_] = returned
+
+        for x in range(tiles_per_chunk):    
+            for y in range(tiles_per_chunk):
+                try:
+                    id_ = chunk_data[x][y]
+                    world_x = x+tilex*20
+                    world_y = y+tiley*20
+                    if id_ == 255:
+                        pixel_rgba = (0,0,0,0)
+                    else:
+                        pixel_rgba = na.TILE_ID_MAP.get(id_, (0, 0, 0)) + (255,)
+
+                    tile = na.Tile(1, world_x-9.5, world_y-9.5, id_)
+                    tile.color = pixel_rgba
+                    chunk_spritelist.append(tile)
+
+                    grid[world_x][world_y] = tile
+
+                except IndexError:
+                    print(f"Warning: Chunk ({tilex}, {tiley}) has missing data at ({x}, {y})")
+
+        return chunk_spritelist
+
+    def process_completed_chunks(self):
+        try:
+            for _ in range(8):
+                if self.chunk_result_queue.empty():
+                    break
+                    
+                tilex, tiley, received_sprite_list = self.chunk_result_queue.get()
+            
+                for tile in received_sprite_list:
+                    self.terrain_scene.add_sprite("2",tile)
+                
+                self.chunk_result_queue.task_done()
+                
+        except queue.Empty:
+            pass
+
     def find_element_near(self, x, y, elements, position_extractor=lambda elem: elem.position, radius=5):
         if not elements:
             return None
@@ -616,71 +684,56 @@ class Game(arcade.Window):
             self.info_scene.add_sprite("0", icon_object)
             self.info_scene_list.append(icon_object)
 
-        timer = time.time()
-        upper_terrain_layer_data = self.upper_terrain_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
-        lower_terrain_layer_data = self.lower_terrain_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
-        political_layer_data = self.political_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
+        # --- generating the hemispheres
+        north_tiles_list = na.compute_tiles(self.upper_terrain_layer,self.political_layer,0,600,0,300,"north")
+        south_tiles_list = na.compute_tiles(self.s_upper_terrain_layer,self.s_political_layer,0,600,0,300,"south")
 
-        s_upper_terrain_layer_data = self.s_upper_terrain_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
-        s_lower_terrain_layer_data = self.s_lower_terrain_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
-        s_political_layer_data = self.s_political_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
-        print(f"data tobyte took {time.time()-timer}")
+        print("?- adding precomputed north map tiles [2/3] ...")
+        for tile, political_tile, x, y in north_tiles_list:
+            self.terrain_scene.add_sprite("1", tile)
+            self.political_scene.add_sprite("0", political_tile)
+            self.upper_terrain_layer.grid[x][y] = tile
+            self.political_layer.grid[x][y] = political_tile
 
-        terrain_palette_data = []
-        political_palette_data=[]
+        print("?- adding precomputed south map tiles [3/3] ...")
+        for tile, political_tile, x, y in south_tiles_list:
+            self.terrain_scene.add_sprite("1", tile)
+            self.political_scene.add_sprite("0", political_tile)
+            self.s_upper_terrain_layer.grid[x][y] = tile
+            self.s_political_layer.grid[x][y] = political_tile
 
-        for i in range(256):
-            if i in na.TILE_ID_MAP:
-                r, g, b = na.TILE_ID_MAP[i]
-            else:
-                r, g, b = (255, 255, 255)
-            a = 0 if i == 255 else 255
-            terrain_palette_data.append([r, g, b, a])
+        # north_coord_sets = [
+        #     (0, 300, 0, 150),    # Northwest quadrant
+        #     (0, 300, 150, 300),  # Northeast quadrant
+        #     (300, 600, 0, 150),  # Southwest quadrant
+        #     (300, 600, 150, 300) # Southeast quadrant
+        # ]
 
-        for i in range(256):
-            if i in na.POLITICAL_ID_MAP:
-                r, g, b = na.POLITICAL_ID_MAP[i]
-            else:
-                r, g, b = (255, 255, 255)
-            a = 0 if i == 255 else 255
-            political_palette_data.append([r, g, b, a])
+        # north_tiles_list = []
 
-        terrain_palette_data = np.array(terrain_palette_data, dtype=np.uint8)
-        terrain_palette_bytes = terrain_palette_data.tobytes()
+        # with multiprocessing.Pool(processes=4, maxtasksperchild=1) as pool:
+        #     timer = time.time()
+        #     print("?- generating args for tiles ...")
+        #     args = [
+        #         (coords, self.upper_terrain_layer, self.political_layer, precomputed_terrain_colors, precomputed_political_colors, "north") 
+        #         for coords in north_coord_sets
+        #     ]
+        #     print("O- done, proceeding ...")
 
-        political_palette_data=np.array(terrain_palette_data, dtype=np.uint8)
-        political_palette_bytes = political_palette_data.tobytes()
+        #     print("?- starting tile computation ...")
+        #     north_tiles_list = list(itertools.chain.from_iterable(
+        #         pool.starmap(na.compute_tiles_wrapper, args)
+        #     ))
+        #     print(f"O- pool exited at {round(time.time()-timer,2)}s")
 
-        self.upper_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=terrain_palette_bytes,         data=upper_terrain_layer_data
-        )
-        self.lower_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(12000, 6000), colors=terrain_palette_bytes,  data=lower_terrain_layer_data
-        )
+        #     print("?- adding precomputed tiles ...")
+        #     for tile, political_tile, x, y in north_tiles_list:
+        #         self.terrain_scene.add_sprite("1", tile)
+        #         self.political_scene.add_sprite("0", political_tile)
+        #         self.lower_terrain_layer.grid[x][y] = tile
+        #         self.political_layer.grid[x][y] = political_tile
 
-        self.s_upper_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=terrain_palette_bytes,         data=s_upper_terrain_layer_data
-        )
-        self.s_lower_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(12000, 6000), colors=terrain_palette_bytes,  data=s_lower_terrain_layer_data
-        )
-
-        self.political_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=political_palette_bytes,       data=political_layer_data
-        )
-        self.s_political_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=political_palette_bytes,   data=s_political_layer_data
-        )
-
-        try:
-            del self.upper_terrain_layer
-            del self.lower_terrain_layer
-            del self.political_layer
-            del self.s_upper_terrain_layer
-            del self.s_lower_terrain_layer
-            del self.s_political_layer
-        except:
-            print("X- couldn't free up memory, good luck.")
+            # adding south map loading later idfk
 
         def _create_keybind_label(text):
             return arcade.gui.UITextArea(
@@ -721,8 +774,16 @@ class Game(arcade.Window):
                 self.keybinds_box.visible = False
 
             print("O- Loaded keybinds popup")
+
+        loader_thread = threading.Thread(
+            target=self.background_loader, 
+            args=(self.chunk_request_queue, self.chunk_result_queue), 
+            daemon=True
+        )
         
-        self.has_map_been_loaded = True
+        print(f"?- Starting background thread : {loader_thread.name}")
+        loader_thread.start()
+        print(f"O- Started backgroun thread : {loader_thread.name}")
 
     def on_resize(self, width, height):
         self.resized_size = width, height
@@ -737,30 +798,52 @@ class Game(arcade.Window):
         self.zoomed_speed_mod = max(self.zoomed_speed_mod+self.zoomed_speed_mod_adder, 0.01)
         self.zoomed_speed_mod = min(self.zoomed_speed_mod, 2.0)
 
+        abd = self.terrain_scene.get_sprite_list("1")
+
+        if self.camera.zoom > 2.5:
+            if abd.visible == True:
+                low_terrain = self.terrain_scene.get_sprite_list("2")
+                low_terrain.visible = True
+            else:
+                low_terrain = self.terrain_scene.get_sprite_list("2")
+                low_terrain.visible = False
+
+            list_of_chunks = []
+            for a in range(12):
+                for b in range(12):
+                    camera_tile = (round(((self.camera.position.x/20)+a)-6),round(((self.camera.position.y/20)+b)-6))
+                    if not (camera_tile[0],camera_tile[1]) in self.requested_chunks:
+                        list_of_chunks.append((camera_tile[0],camera_tile[1]))
+                        self.requested_chunks.add((camera_tile[0],camera_tile[1]))
+
+            for chunk in list_of_chunks:
+                self.chunk_request_queue.put(chunk)
+
+            list_of_chunks.clear()
+        else:
+            low_terrain = self.terrain_scene.get_sprite_list("2")
+            low_terrain.visible = False
+
+        self.process_completed_chunks()
+
         for icon in self.info_scene_list:
             icon.scale = max(1.0-(self.camera.zoom/3),0.05)
             icon.color = na.QUALITY_COLOR_MAP.get(icon.quality, (255,0,0,255))
 
     def on_draw(self):
         self.camera.use() 
-        self.clear()
-        arcade.draw_lbwh_rectangle_filled(0,0,12000,6000,(0,0,127,255))
-        arcade.draw_lbwh_rectangle_filled(0,0,12000,-6000,(0,0,127,255))
-
-        self.ctx.enable(self.ctx.BLEND)
-        if self.has_map_been_loaded:
-            self.upper_terrain_layer_texture.draw(size=(12000,6000))
-            self.s_upper_terrain_layer_texture.draw(size=(12000,6000))
-            if self.camera.zoom >= 1.5:
-                self.lower_terrain_layer_texture.draw(size=(12000,6000))
-                self.s_lower_terrain_layer_texture.draw(size=(12000,6000))
-        self.ctx.disable(self.ctx.BLEND)
+        self.clear() 
+        arcade.draw_lbwh_rectangle_filled(-10,-10,12000,6000,(0,0,127,255))
+        arcade.draw_lbwh_rectangle_filled(-10,-10,12000,-6000,(0,0,127,255))
+        self.terrain_scene.draw(pixelated=True)
 
         if self.political_background == True:
-            arcade.draw_lbwh_rectangle_filled(0,0,12000,6000,(0,0,0,255))
-            arcade.draw_lbwh_rectangle_filled(0,0,12000,-6000,(0,0,0,255))
+            arcade.draw_lbwh_rectangle_filled(-10,-10,12000,6000,(0,0,0,255))
+            arcade.draw_lbwh_rectangle_filled(-10,-10,12000,-6000,(0,0,0,255))
 
-        arcade.draw_line(0,0,12000,0,(80,80,80),2)
+        arcade.draw_line(-10,-10,12000,-10,(80,80,80),2)
+
+        self.political_scene.draw(pixelated=True)
 
         for start, end in self.icons['lines']:
             arcade.draw_line(start[0],start[1],end[0],end[1],(255,0,0,255),line_width=0.1)
@@ -795,6 +878,7 @@ class Game(arcade.Window):
                 arcade.draw_circle_outline(self.current_position_world[0],self.current_position_world[1],2,(255,255,255,255),0.2,0,-1)
         
         self.ui.draw()
+        self.color_chunk.draw()
 
     def on_key_press(self, symbol, modifier):
         if symbol   == arcade.key.W or symbol == arcade.key.UP:
@@ -926,20 +1010,29 @@ class Game(arcade.Window):
                         center_x = (min_x + max_x) / 2
                         center_y = (min_y + max_y) / 2
                         
+                        pixel_rgba = na.TILE_ID_MAP.get(self.selected_lower_id, (0,0,0)) + (255,)
+                        
                         target_positions = []
                         for rel_x, rel_y in coordinates:
-                            x_pos = round(world_x-0.5 + (rel_x - center_x))
-                            y_pos = round(world_y-0.5 + (rel_y - center_y))
+                            x_pos = round(world_x + (rel_x - center_x) + 9.5)
+                            if not world_y < 0:
+                                y_pos = round(world_y + (rel_y - center_y) + 9.5)
+                            else:
+                                y_pos = round(6000-abs(world_y) + (rel_y - center_y) + 9.5)
                             target_positions.append((x_pos, y_pos))
                         
                         for pos in target_positions:
-                            x__, y__ = pos
-                            if not y__ < 0:
-                                self.lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                            if not world_y < 0:
+                                tile = self.lower_terrain_layer.__getitem__(pos)
                             else:
-                                y__ = 6000-abs(y__)
-                                self.s_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                tile = self.s_lower_terrain_layer.__getitem__(pos)
+                            if tile is not None:
+                                tile.color = pixel_rgba
+                                tile.id_ = self.selected_lower_id
+                            else:
+                                print(f"No tile at position {pos}")
                     else:
+                        list_of_tiles = np.zeros((self.editing_mode_size,self.editing_mode_size), dtype=object)
                         list_of_tile_positions = []
 
                         half_size = self.editing_mode_size // 2
@@ -954,28 +1047,41 @@ class Game(arcade.Window):
 
                                 if not self.editing_mode_size == 1:
                                     if distance <= (radius + 0.5) ** 2:
-                                        list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
+                                        if not y_ < 0:
+                                            list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
+                                            list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                        else:
+                                            list_of_tiles[x_offset, y_offset] = self.s_lower_terrain_layer.__getitem__((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
+                                            list_of_tile_positions.append((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
+                                    else:
+                                        list_of_tiles[x_offset, y_offset] = None 
                                 else:
-                                    list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
+                                    if not y_ < 0:
+                                        list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
+                                        list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                    else:
+                                        list_of_tiles[x_offset, y_offset] = self.s_lower_terrain_layer.__getitem__((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
+                                        list_of_tile_positions.append((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
 
-                        if list_of_tile_positions:
-                            for pos in list_of_tile_positions:
-                                x__, y__ = pos
-                                if not y__ < 0:
-                                    self.lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                        for x_ in range(self.editing_mode_size):
+                            for y_ in range(self.editing_mode_size):
+                                if list_of_tiles[x_][y_]:
+                                    pixel_rgba = na.TILE_ID_MAP.get(self.selected_lower_id,(0,0,0)) + (255,)
+                                    list_of_tiles[x_][y_].color = pixel_rgba
+                                    list_of_tiles[x_][y_].id_ = self.selected_lower_id
                                 else:
-                                    y__ = 6000-abs(y__)
-                                    self.s_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
-                        else:
-                            print(f"no positions")
+                                    print(f"no tiles returned to selection ...")
                 
                 elif self.camera.zoom < 2.5:
                     if not tile_y < 0:
-                        political_tile_to_edit = tile_x,tile_y
-                        self.political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
+                        political_tile_to_edit = self.political_layer.__getitem__((tile_x,tile_y))
                     else:
-                        political_tile_to_edit = tile_x,600-abs(tile_y)
-                        self.s_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
+                        political_tile_to_edit = self.s_political_layer.__getitem__((tile_x,300-abs(tile_y)))
+
+                    if political_tile_to_edit:
+                        political_tile_to_edit.color = na.POLITICAL_ID_MAP.get(self.selected_country_id,0)
+                        political_tile_to_edit.id_ = self.selected_country_id
+                        print(f"set {tile_x,tile_y} to id {self.selected_country_id}, color {na.POLITICAL_ID_MAP.get(self.selected_country_id,0)}")
 
             else:
                 if self.selected_icon_id or self.selected_icon_id == 0:
@@ -1225,7 +1331,7 @@ class Game(arcade.Window):
                     if self.selected_brush:
                         coordinates = na.get_pixel_coordinates(self.selected_brush)
                         if not coordinates:
-                            print("No coordinates provided.")
+                            print("X- brush empty, passing")
                             return
                             
                         min_x = min(x for x, y in coordinates)
@@ -1236,20 +1342,29 @@ class Game(arcade.Window):
                         center_x = (min_x + max_x) / 2
                         center_y = (min_y + max_y) / 2
                         
+                        pixel_rgba = na.TILE_ID_MAP.get(self.selected_lower_id, (0,0,0)) + (255,)
+                        
                         target_positions = []
                         for rel_x, rel_y in coordinates:
-                            x_pos = round(world_x-0.5 + (rel_x - center_x))
-                            y_pos = round(world_y-0.5 + (rel_y - center_y))
+                            x_pos = round(world_x + (rel_x - center_x) + 9.5)
+                            if not world_y < 0:
+                                y_pos = round(world_y + (rel_y - center_y) + 9.5)
+                            else:
+                                y_pos = round(6000-abs(world_y) + (rel_y - center_y) + 9.5)
                             target_positions.append((x_pos, y_pos))
                         
                         for pos in target_positions:
-                            x__, y__ = pos
-                            if not y__ < 0:
-                                self.lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                            if not world_y < 0:
+                                tile = self.lower_terrain_layer.__getitem__(pos)
                             else:
-                                y__ = 6000-abs(y__)
-                                self.s_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                tile = self.s_lower_terrain_layer.__getitem__(pos)
+                            if tile is not None:
+                                tile.color = pixel_rgba
+                                tile.id_ = self.selected_lower_id
+                            else:
+                                print(f"X- no tile at position {pos}")
                     else:
+                        list_of_tiles = np.zeros((self.editing_mode_size,self.editing_mode_size), dtype=object)
                         list_of_tile_positions = []
 
                         half_size = self.editing_mode_size // 2
@@ -1264,28 +1379,30 @@ class Game(arcade.Window):
 
                                 if not self.editing_mode_size == 1:
                                     if distance <= (radius + 0.5) ** 2:
-                                        list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
+                                        if not y_ < 0:
+                                            list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
+                                            list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                        else:
+                                            list_of_tiles[x_offset, y_offset] = self.s_lower_terrain_layer.__getitem__((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
+                                            list_of_tile_positions.append((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
+                                    else:
+                                        list_of_tiles[x_offset, y_offset] = None 
                                 else:
-                                    list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
+                                    if not y_ < 0:
+                                        list_of_tiles[x_offset, y_offset] = self.lower_terrain_layer.__getitem__((round(x_ + 9.5), round(y_ + 9.5)))
+                                        list_of_tile_positions.append((round(x_ + 9.5), round(y_ + 9.5)))
+                                    else:
+                                        list_of_tiles[x_offset, y_offset] = self.s_lower_terrain_layer.__getitem__((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
+                                        list_of_tile_positions.append((round(x_ + 9.5), round(6000-abs(y_) + 9.5)))
 
-                        if list_of_tile_positions:
-                            for pos in list_of_tile_positions:
-                                x__, y__ = pos
-                                if not y__ < 0:
-                                    self.lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                        for x_ in range(self.editing_mode_size):
+                            for y_ in range(self.editing_mode_size):
+                                if not list_of_tiles[x_][y_] is None:
+                                    pixel_rgba = na.TILE_ID_MAP.get(self.selected_lower_id,(0,0,0)) + (255,)
+                                    list_of_tiles[x_][y_].color = pixel_rgba
+                                    list_of_tiles[x_][y_].id_ = self.selected_lower_id
                                 else:
-                                    y__ = 6000-abs(y__)
-                                    self.s_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
-                        else:
-                            print(f"no positions")
-
-                elif self.camera.zoom < 2.5:
-                    if not tile_y < 0:
-                        political_tile_to_edit = tile_x,tile_y
-                        self.political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
-                    else:
-                        political_tile_to_edit = tile_x,600-abs(tile_y)
-                        self.s_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
+                                    print(f"no tiles returned to selection ...")
 
             else:
                 if self.moving_the_icon == True:
@@ -1302,6 +1419,7 @@ class Game(arcade.Window):
         if button is arcade.MOUSE_BUTTON_LEFT:
             self.last_pressed_world = None
             self.last_pressed_screen = None
+            #self.moving_the_icon = False
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         if self.editing_mode == False:
@@ -1333,6 +1451,10 @@ class Game(arcade.Window):
         world_y = ((((y - self.height / 2)-diff_fr_res[1]) / self.camera.zoom) + self.camera.position.y)
         # x -> origin point changed to the center with '/2' -> zoom amount -> camera offset 
         self.current_position_world = (world_x, world_y)
+
+        tile_x = round(world_x / 20)
+        tile_y = round(world_y / 20)
+        self.last_interacted_tile = self.upper_terrain_layer.__getitem__((tile_x, tile_y))
 
     def cleanup(self):
         self.chunk_result_queue.shutdown()
