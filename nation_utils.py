@@ -33,12 +33,6 @@ class Toast(arcade.gui.UILabel):
         if self.time > self.duration:
             self.parent.remove(self)
 
-# class Tile(arcade.SpriteSolidColor):
-#     __slots__ = ('id_',)
-#     def __init__(self, width, height, x, y, color, id_):
-#         super().__init__(width, height, x, y, color=color)
-#         self.id_ = id_
-
 class Tile(arcade.BasicSprite):
     def __init__(self, size = 1, center_x = 0, center_y = 0, id_ = 0, **kwargs):
         super().__init__(texture=tile_texture, scale=size, center_x=center_x, center_y=center_y, visible=True, **kwargs)
@@ -46,17 +40,9 @@ class Tile(arcade.BasicSprite):
 
 class GridLayer():
     """Suggestion from @typefoo"""
-    def __init__(self, grid_size: tuple[int, int], tile_size: int = 10):
-        self.tile_size = tile_size
+    def __init__(self, grid_size: tuple[int, int]):
         self.grid_size = grid_size
-        self.grid = numpy.empty((grid_size[0], grid_size[1]), dtype=object)
-        self.grid_width, self.grid_height = grid_size
-
-    def __getitem__(self, grid_point: tuple[int, int]):
-        x, y = grid_point
-        if 0 <= x < self.grid_width and 0 <= y < self.grid_height:
-            return self.grid[x][y]
-        return None
+        self.grid = numpy.empty((grid_size[0], grid_size[1]), dtype=numpy.uint8)
     
 def get_all_files(directory):
     all_files = []
@@ -102,73 +88,6 @@ def get_pixel_coordinates(image_path:str) -> list:
                 coordinates.append((rel_x, rel_y))
     
     return coordinates
-
-def compute_tiles_wrapper(coords, terrain_layer, political_layer, precomputed_terrain_colors, precomputed_political_colors, direction):
-    x_start, x_end, y_start, y_end = coords
-    return compute_tiles(terrain_layer, political_layer, x_start, x_end, y_start, y_end, 0, direction, precomputed_terrain_colors, precomputed_political_colors)
-
-def compute_tiles(upper_layer, political_layer, x_start, x_end, y_start, y_end, map_name):
-    print(f"?- precomputing {map_name} hemisphere {x_start,y_start} {x_start,x_end}")
-    offset_y_ = 0
-    if map_name == "south":
-        offset_y_ = -6000
-    timee = time.time()
-    temp_tiles = []
-
-    grid_terrain = upper_layer.grid
-    grid_political = political_layer.grid
-
-    for x in range(x_start, x_end):
-        if x % 100 == 0:
-            print(f"O- {round((x / x_end) * 100)}% {map_name} computed ...")
-
-        terrain_row = grid_terrain[x]
-        political_row = grid_political[x]
-
-        for y in range(y_start, y_end):
-            tile_id = terrain_row[y]
-            political_tile_id = political_row[y]
-
-            world_x = x * 20
-            world_y = (y * 20) + offset_y_
-
-            terrain_alpha = 0 if tile_id == 0 else 255
-            political_alpha = 100 if tile_id == 0 else 255
-
-            tile = Tile(20, world_x, world_y, id_=tile_id)
-            tile.color = TILE_ID_MAP.get(tile_id,(255,255,255)) + (terrain_alpha,)
-            political_tile = Tile(20, world_x, world_y, id_=political_tile_id)
-            political_tile.color = POLITICAL_ID_MAP.get(political_tile_id,(255,255,255)) + (political_alpha,)
-
-            temp_tiles.append((tile, political_tile, x, y))
-
-    print(f"Process {multiprocessing.current_process().name} finished computing {map_name} in {time.time()-timee} s")
-    return temp_tiles
-
-def compute_lower_wrapper(coords, layer, terrain_colors):
-    x_start, x_end, y_start, y_end = coords
-    return compute_lower_tiles(layer, x_start, x_end, y_start, y_end, terrain_colors)
-
-def compute_lower_tiles(layer, x_start, x_end, y_start, y_end, terrain_colors):
-    print(f"?- precomputing higher detail {x_start,y_start} {x_start,y_end}")
-    timer = time.time()
-    temp_tiles_list = []
-    grid_terrain = layer.grid
-
-    for x in range(x_start, x_end):
-        if x % 100 == 0:
-            print(f"O- process : {multiprocessing.current_process} = {round((x_start / x_end) * 100, 3)}%")
-        terrain_row = grid_terrain[x]
-        for y in range(y_start, y_end):
-            tile_id = terrain_row[y]
-            world_x = x * 20
-            world_y = y * 20
-            terrain_alpha = 0 if tile_id == 0 else 255
-            tile = Tile(20, 20, world_x, world_y, (*terrain_colors[tile_id], terrain_alpha), tile_id)
-            temp_tiles_list.append((tile,x,y))
-
-    print(f"Process {multiprocessing.current_process().name} finished computing in {time.time()-timer} s")
-    return temp_tiles_list
 
 #---
 TILE_ID_MAP         = {

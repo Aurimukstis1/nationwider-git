@@ -4,14 +4,9 @@ import arcade.gui
 import arcade.gui.widgets
 import math
 import numpy as np
-import threading
-import queue
 import random
 import nation_utils as na
 import time
-import os
-import multiprocessing
-import concurrent.futures as futuress
 import chunk_gpu as cgpu
 # display settings; ts pmo fr rn 
 WIDTH, HEIGHT = 1920, 1080
@@ -77,43 +72,19 @@ class Game(arcade.Window):
         self.drawing_line_start     = None
         self.drawing_line_end       = None
 
+        self.grid_assistance        = False
+
+        self.biome_visibility    = True
+        self.country_visibility  = True
+
         self.has_map_been_loaded    = False
         print("O- variables set up")
 
         print("?- setting up view layers ...")
-        self.terrain_scene          = arcade.Scene()
-        print("[1/3]:self.terrain_scene")
-        self.political_scene        = arcade.Scene()
-        print("[2/3]:self.political_scene")
         self.info_scene             = arcade.Scene()
-        print("[3/3]:self.info_scene")
+
+        self.info_scene_list        = []
         print("O- view layers set up")
-
-        print("?- setting up loader queues ...")
-        self.chunk_request_queue    = queue.Queue()
-        self.chunk_result_queue     = queue.Queue()
-        self.requested_chunks       = set()
-        print("O- request and result queues set up")
-
-        print("?- setting up terrain spritelists ...")
-        self.terrain_scene.add_sprite_list("0")
-        print("[1/3]:self.terrain_scene 0")
-        self.terrain_scene.add_sprite_list("1")
-        print("[2/3]:self.terrain_scene 1")
-        self.terrain_scene.add_sprite_list("2")
-        print("[3/3]:self.terrain_scene 2")
-        print("O- terrain spritelists set up")
-
-        print("?- setting up info spritelists ...")
-        self.info_scene.add_sprite_list("0")
-        print("[1/1]:self.info_scene 0")
-        self.info_scene_list = []
-        print("O- info spritelists set up")
-
-        print("?- setting up political spritelists ...")
-        self.political_scene.add_sprite_list("0")
-        print("[1/1]:self.political_scene 0")
-        print("O- political spritelists set up")
 
         print("?- setting up UI manager ...")
         self.ui = arcade.gui.UIManager()
@@ -122,19 +93,15 @@ class Game(arcade.Window):
 
         # < - DEFINING GRIDS FOR ALL LAYERS #GRIDS
         print("?- setting up grid layers ...")
-        self.political_layer        = na.GridLayer((600,300)   ,20)
-        print("[1/6]:self.political_layer")
-        self.upper_terrain_layer    = na.GridLayer((600,300)   ,20)
-        print("[2/6]:self.upper_terrain_layer")
-        self.lower_terrain_layer    = na.GridLayer((12000,6000),1 )
-        print("[3/6]:self.lower_terrain_layer")
+        
+        self.political_layer        = na.GridLayer((600,300))
+        self.upper_terrain_layer    = na.GridLayer((600,300))
+        self.lower_terrain_layer    = na.GridLayer((12000,6000))
 
-        self.s_political_layer      = na.GridLayer((600,300)   ,20)
-        print("[4/6]:self.s_political_layer")
-        self.s_upper_terrain_layer  = na.GridLayer((600,300)   ,20)
-        print("[5/6]:self.s_upper_terrain_layer")
-        self.s_lower_terrain_layer  = na.GridLayer((12000,6000),1 )
-        print("[6/6]:self.s_lower_terrain_layer")
+        self.s_political_layer      = na.GridLayer((600,300))
+        self.s_upper_terrain_layer  = na.GridLayer((600,300))
+        self.s_lower_terrain_layer  = na.GridLayer((12000,6000))
+
         self.icons = {
             'locations': [],
             'lines': []
@@ -148,6 +115,9 @@ class Game(arcade.Window):
         self.s_upper_terrain_layer_texture=None
         self.s_lower_terrain_layer_texture=None
         self.s_political_layer_texture    =None
+
+        self.north_political_water_overlay_layer_texture = None
+        self.south_political_water_overlay_layer_texture = None
 
         keybinds_anchor = self.ui.add(arcade.gui.UIAnchorLayout())
         self.keybinds_box = keybinds_anchor.add(arcade.gui.UIBoxLayout(space_between=0), anchor_x="center", anchor_y="center")
@@ -444,40 +414,37 @@ class Game(arcade.Window):
 
         try:
             loaded_a_data                   = loaded_data['a']
-            self.upper_terrain_layer.grid[:]= loaded_a_data
+            self.upper_terrain_layer.grid[:]= np.reshape(loaded_a_data,(600,300))
         except:
             print("X- no a definition? skipping.")
 
         try:
             loaded_b_data                   = loaded_data['b']
-            self.political_layer.grid[:]    = loaded_b_data
+            self.political_layer.grid[:]    = np.reshape(loaded_b_data,(600,300))
         except:
             print("X- no b definition? skipping.")
 
         try:
             loaded_c_data                   = loaded_data['c']
-            self.lower_terrain_layer.grid[:]= loaded_c_data
+            self.lower_terrain_layer.grid[:]= np.reshape(loaded_c_data,(12000,6000))
         except:
             print("X- no c definition? skipping.")
 
         # ---
         try:
             loaded_a_s_data                 = loaded_data['a_s']
-            self.s_upper_terrain_layer.grid[:]=loaded_a_s_data
+            self.s_upper_terrain_layer.grid[:]=np.reshape(loaded_a_s_data,(600,300))
         except:
             print("X- no a_s definition? skipping.")
 
         try:
             loaded_b_s_data                 = loaded_data['b_s']
-            self.s_political_layer.grid[:]  = loaded_b_s_data
+            self.s_political_layer.grid[:]  = np.reshape(loaded_b_s_data,(600,300))
         except:
             print("X- no b_s definition? skipping.")
 
-        try:
-            loaded_c_s_data                 = loaded_data['c_s']
-            self.s_lower_terrain_layer.grid[:]=loaded_c_s_data
-        except:
-            print("X- no c_s definition? skipping.")
+        loaded_c_s_data                 = loaded_data['c_s']
+        self.s_lower_terrain_layer.grid[:]=np.reshape(loaded_c_s_data,(12000,6000))
 
         # ---
 
@@ -491,65 +458,17 @@ class Game(arcade.Window):
 
     def on_clicked_save(self):
         try:
-            self.on_notification_toast("Trying to save map ...")
-            a_grid = np.empty((600,300),    dtype=np.uint8)
-            a_grid = np.empty((600,300),    dtype=np.uint8)
-            c_grid = np.empty((12000,6000), dtype=np.uint8)
-            a_s_grid=np.empty((600,300),    dtype=np.uint8)
-            b_s_grid=np.empty((600,300),    dtype=np.uint8)
-            c_s_grid=np.empty((12000,6000), dtype=np.uint8)
+            a_grid = np.frombuffer(self.north_upper_terrain_layer_texture.read(), dtype="u1")
+            b_grid = np.frombuffer(self.north_political_layer_texture.read(), dtype="u1")
+            c_grid = np.frombuffer(self.north_lower_terrain_layer_texture.read(), dtype="u1")
 
-            def extract_id_optimized(grid):
-                # Create a mask for where elements are instances of `na.Tile`
-                is_tile = np.vectorize(lambda x: isinstance(x, na.Tile))(grid)
-
-                # Initialize the result with the grid values (to handle non-tile elements)
-                result = np.copy(grid)
-                
-                # Handle the case where the element is a Tile and extract the id_
-                result[is_tile] = np.array([cell.id_ for cell in grid[is_tile]])
-
-                # Handle the case for `None` (replace with 255)
-                result[grid == None] = 255
-
-                # Handle the case for 0 values (replace with 0)
-                result[grid == 0] = 0
-
-                return result
-            
-            def extract_country_id_optimized(grid):
-                # Create a mask for where elements are instances of `na.Tile`
-                is_tile = np.vectorize(lambda x: isinstance(x, na.Tile))(grid)
-                
-                # Initialize the result with the grid values (to handle non-tile elements)
-                result = np.copy(grid)
-                
-                # Handle the case where the element is a Tile and extract the id_
-                result[is_tile] = np.array([cell.id_ for cell in grid[is_tile]])
-
-                return result
-
-            #extract_attribute_biome = np.vectorize(extract_id, otypes=[np.uint8])
-            #extract_attribute_country = np.vectorize(extract_country_id, otypes=[np.uint8])
-
-            print("?- converting northern hemisphere ...")
-            timer = time.time()
-            a_grid = extract_id_optimized(self.upper_terrain_layer.grid); print("...")
-            b_grid = extract_country_id_optimized(self.political_layer.grid); print("...")
-            c_grid = extract_id_optimized(self.lower_terrain_layer.grid); print("...")
-            time_taken = time.time()-timer
-            print(f"O- converted, took {round(time_taken,3)}s")
-
-            print("?- converting southern hemisphere ...")
-            timer = time.time()
-            a_s_grid = extract_id_optimized(self.s_upper_terrain_layer.grid); print("...")
-            b_s_grid = extract_country_id_optimized(self.s_political_layer.grid); print("...")
-            c_s_grid = extract_id_optimized(self.s_lower_terrain_layer.grid); print("...")
-            print(f"O- converted, took {round(time_taken,3)}s")
+            a_s_grid = np.frombuffer(self.south_upper_terrain_layer_texture.read(), dtype="u1")
+            b_s_grid = np.frombuffer(self.south_political_layer_texture.read(), dtype="u1")
+            c_s_grid = np.frombuffer(self.south_lower_terrain_layer_texture.read(), dtype="u1")
 
             print("?- trying np.savez_compressed ...")
             timer = time.time()
-            np.savez_compressed(f"map_data/n_{time.localtime().tm_year}_{time.localtime().tm_mon}_{time.localtime().tm_mday}_{time.localtime().tm_hour}_{time.localtime().tm_min}_{time.localtime().tm_sec}.npz",
+            np.savez_compressed(f"map_data/gpu-n_{time.localtime().tm_year}_{time.localtime().tm_mon}_{time.localtime().tm_mday}_{time.localtime().tm_hour}_{time.localtime().tm_min}_{time.localtime().tm_sec}.npz",
                                 a=a_grid,
                                 b=b_grid,
                                 c=c_grid,
@@ -617,17 +536,19 @@ class Game(arcade.Window):
             self.info_scene_list.append(icon_object)
 
         timer = time.time()
-        upper_terrain_layer_data = self.upper_terrain_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
-        lower_terrain_layer_data = self.lower_terrain_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
-        political_layer_data = self.political_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
+        north_upper_terrain_layer_data = self.upper_terrain_layer.grid.astype(np.uint8).tobytes()
+        north_lower_terrain_layer_data = self.lower_terrain_layer.grid.astype(np.uint8).tobytes()
+        north_political_layer_data = self.political_layer.grid.astype(np.uint8).tobytes()
 
-        s_upper_terrain_layer_data = self.s_upper_terrain_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
-        s_lower_terrain_layer_data = self.s_lower_terrain_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
-        s_political_layer_data = self.s_political_layer.grid.transpose((-1,0)).astype(np.uint8).tobytes()
+        south_upper_terrain_layer_data = self.s_upper_terrain_layer.grid.astype(np.uint8).tobytes()
+        south_lower_terrain_layer_data = self.s_lower_terrain_layer.grid.astype(np.uint8).tobytes()
+        south_political_layer_data = self.s_political_layer.grid.astype(np.uint8).tobytes()
         print(f"data tobyte took {time.time()-timer}")
 
         terrain_palette_data = []
         political_palette_data=[]
+
+        political_water_overlay_palette = []
 
         for i in range(256):
             if i in na.TILE_ID_MAP:
@@ -642,34 +563,48 @@ class Game(arcade.Window):
                 r, g, b = na.POLITICAL_ID_MAP[i]
             else:
                 r, g, b = (255, 255, 255)
-            a = 0 if i == 255 else 255
-            political_palette_data.append([r, g, b, a])
+            political_palette_data.append([r, g, b, 255])
+
+        for i in range(256):
+            r, g, b = (0,0,0)
+            a = 155 if i == 0 else 0
+            political_water_overlay_palette.append([r, g, b, a])
 
         terrain_palette_data = np.array(terrain_palette_data, dtype=np.uint8)
         terrain_palette_bytes = terrain_palette_data.tobytes()
 
-        political_palette_data=np.array(terrain_palette_data, dtype=np.uint8)
+        political_palette_data = np.array(political_palette_data, dtype=np.uint8)
         political_palette_bytes = political_palette_data.tobytes()
 
-        self.upper_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=terrain_palette_bytes,         data=upper_terrain_layer_data
+        political_water_overlay_palette_data = np.array(political_water_overlay_palette, dtype=np.uint8)
+        political_water_overlay_palette_bytes= political_water_overlay_palette_data.tobytes()
+
+        self.north_upper_terrain_layer_texture = cgpu.ColorChunk(
+            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=terrain_palette_bytes,         data=north_upper_terrain_layer_data
         )
-        self.lower_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(12000, 6000), colors=terrain_palette_bytes,  data=lower_terrain_layer_data
+        self.north_lower_terrain_layer_texture = cgpu.ColorChunk(
+            pos=(0,0), ctx=self.ctx, size=(12000, 6000), colors=terrain_palette_bytes,  data=north_lower_terrain_layer_data
         )
 
-        self.s_upper_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=terrain_palette_bytes,         data=s_upper_terrain_layer_data
+        self.south_upper_terrain_layer_texture = cgpu.ColorChunk(
+            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=terrain_palette_bytes,         data=south_upper_terrain_layer_data
         )
-        self.s_lower_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(12000, 6000), colors=terrain_palette_bytes,  data=s_lower_terrain_layer_data
+        self.south_lower_terrain_layer_texture = cgpu.ColorChunk(
+            pos=(0,-6000), ctx=self.ctx, size=(12000, 6000), colors=terrain_palette_bytes,  data=south_lower_terrain_layer_data
         )
 
-        self.political_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=political_palette_bytes,       data=political_layer_data
+        self.north_political_layer_texture = cgpu.ColorChunk(
+            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=political_palette_bytes,       data=north_political_layer_data
         )
-        self.s_political_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=political_palette_bytes,   data=s_political_layer_data
+        self.south_political_layer_texture = cgpu.ColorChunk(
+            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=political_palette_bytes,   data=south_political_layer_data
+        )
+
+        self.north_political_water_overlay_layer_texture = cgpu.ColorChunk(
+            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=political_water_overlay_palette_bytes,       data=north_upper_terrain_layer_data
+        )
+        self.south_political_water_overlay_layer_texture = cgpu.ColorChunk(
+            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=political_water_overlay_palette_bytes,       data=south_upper_terrain_layer_data
         )
 
         try:
@@ -748,17 +683,33 @@ class Game(arcade.Window):
         arcade.draw_lbwh_rectangle_filled(0,0,12000,-6000,(0,0,127,255))
 
         self.ctx.enable(self.ctx.BLEND)
+
         if self.has_map_been_loaded:
-            self.upper_terrain_layer_texture.draw(size=(12000,6000))
-            self.s_upper_terrain_layer_texture.draw(size=(12000,6000))
-            if self.camera.zoom >= 1.5:
-                self.lower_terrain_layer_texture.draw(size=(12000,6000))
-                self.s_lower_terrain_layer_texture.draw(size=(12000,6000))
-        self.ctx.disable(self.ctx.BLEND)
+            if self.biome_visibility:
+                self.north_upper_terrain_layer_texture.draw(size=(12000,6000))
+                self.south_upper_terrain_layer_texture.draw(size=(12000,6000))
+                if self.camera.zoom >= 1.5:
+                    self.north_lower_terrain_layer_texture.draw(size=(12000,6000))
+                    self.south_lower_terrain_layer_texture.draw(size=(12000,6000))
 
         if self.political_background == True:
-            arcade.draw_lbwh_rectangle_filled(0,0,12000,6000,(0,0,0,255))
-            arcade.draw_lbwh_rectangle_filled(0,0,12000,-6000,(0,0,0,255))
+            if self.has_map_been_loaded:
+                if self.country_visibility:
+                    self.north_political_layer_texture.draw(size=(12000,6000))
+                    self.south_political_layer_texture.draw(size=(12000,6000))
+                    self.north_political_water_overlay_layer_texture.draw(size=(12000,6000))
+                    self.south_political_water_overlay_layer_texture.draw(size=(12000,6000))
+
+        self.ctx.disable(self.ctx.BLEND)
+
+        if self.grid_assistance:
+            for x__ in range(600):
+                if x__*20 > self.camera.position[0]-100 and x__*20 < self.camera.position[0]+100:
+                    arcade.draw_line(x__*20,0,x__*20,6000,color=(200,200,200,200),line_width=0.5)
+
+            for y__ in range(300):
+                if y__*20 > self.camera.position[1]-100 and y__*20 < self.camera.position[1]+100:
+                    arcade.draw_line(0,y__*20,12000,y__*20,color=(200,200,200,200),line_width=0.5)
 
         arcade.draw_line(0,0,12000,0,(80,80,80),2)
 
@@ -790,7 +741,7 @@ class Game(arcade.Window):
                     arcade.draw_sprite(crosshair_sprite,pixelated=True)
                     arcade.draw_lrbt_rectangle_outline(round(self.current_position_world[0]-0.5),round(self.current_position_world[0]+0.5),round(self.current_position_world[1]-0.5),round(self.current_position_world[1]+0.5),color=(255,255,255,255),border_width=0.1)
                 else:
-                    arcade.draw_lbwh_rectangle_outline(round(self.current_position_world[0]/20)*20-10,round(self.current_position_world[1]/20)*20-10,20,20,(255,255,255,255),1)
+                    arcade.draw_lbwh_rectangle_outline(round(self.current_position_world[0]/20-0.5)*20,round(self.current_position_world[1]/20-0.5)*20,20,20,(255,255,255,255),1)
             else:
                 arcade.draw_circle_outline(self.current_position_world[0],self.current_position_world[1],2,(255,255,255,255),0.2,0,-1)
         
@@ -810,14 +761,9 @@ class Game(arcade.Window):
             icons_spritelist = self.info_scene.get_sprite_list("0")
             icons_spritelist.visible = not icons_spritelist.visible
         if symbol   == arcade.key.KEY_2:
-            political_spritelist = self.political_scene.get_sprite_list("0")
-            political_spritelist.visible = not political_spritelist.visible
-            self.political_background = not self.political_background
+            self.country_visibility = not self.country_visibility
         if symbol   == arcade.key.KEY_3:
-            biome_spritelist = self.terrain_scene.get_sprite_list("1")
-            biome_spritelist_2=self.terrain_scene.get_sprite_list("2")
-            biome_spritelist.visible = not biome_spritelist.visible
-            biome_spritelist_2.visible = not biome_spritelist_2.visible
+            self.biome_visibility = not self.biome_visibility
         if symbol   == arcade.key.KEY_0:
             self.zoomed_speed_mod_adder = 0.01
         if symbol   == arcade.key.KEY_9:
@@ -825,8 +771,13 @@ class Game(arcade.Window):
 
         if symbol   == arcade.key.O:
             self.editing_mode = not self.editing_mode
+            self.on_notification_toast(f"editing mode toggled {self.editing_mode}")
+        if symbol   == arcade.key.G:
+            self.grid_assistance = not self.grid_assistance
+            self.on_notification_toast(f"assistance grid toggled {self.grid_assistance}")
         if symbol   == arcade.key.F:
             self.set_fullscreen(not self.fullscreen)
+            self.on_notification_toast(f"fullscreen toggled")
         if symbol   == arcade.key.M:
             if self.rotating_the_icon == True:
                 self.rotating_the_icon = False
@@ -907,8 +858,8 @@ class Game(arcade.Window):
             world_y = ((((y - self.height / 2)-diff_fr_res[1]) / self.camera.zoom) + self.camera.position.y)
             # x -> origin point changed to the center with '/2' -> zoom amount -> camera offset 
             self.last_pressed_world = (world_x, world_y)
-            tile_x = round(world_x / 20)
-            tile_y = round(world_y / 20)
+            tile_x = round(world_x / 20 - 0.5)
+            tile_y = round(world_y / 20 - 0.5)
 
             if self.editing_mode == True:
                 if self.camera.zoom >= 2.5:
@@ -935,10 +886,10 @@ class Game(arcade.Window):
                         for pos in target_positions:
                             x__, y__ = pos
                             if not y__ < 0:
-                                self.lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
                             else:
                                 y__ = 6000-abs(y__)
-                                self.s_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
                     else:
                         list_of_tile_positions = []
 
@@ -962,20 +913,20 @@ class Game(arcade.Window):
                             for pos in list_of_tile_positions:
                                 x__, y__ = pos
                                 if not y__ < 0:
-                                    self.lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                    self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
                                 else:
                                     y__ = 6000-abs(y__)
-                                    self.s_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                    self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
                         else:
                             print(f"no positions")
                 
                 elif self.camera.zoom < 2.5:
                     if not tile_y < 0:
                         political_tile_to_edit = tile_x,tile_y
-                        self.political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
+                        self.north_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
                     else:
                         political_tile_to_edit = tile_x,600-abs(tile_y)
-                        self.s_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
+                        self.south_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
 
             else:
                 if self.selected_icon_id or self.selected_icon_id == 0:
@@ -1199,8 +1150,8 @@ class Game(arcade.Window):
             world_x = ((((x - self.width  / 2)-diff_fr_res[0]) / self.camera.zoom) + camera_x) 
             world_y = ((((y - self.height / 2)-diff_fr_res[1]) / self.camera.zoom) + camera_y)
             # x -> origin point changed to the center with '/2' -> zoom amount -> camera offset
-            tile_x = round(world_x / 20)
-            tile_y = round(world_y / 20)
+            tile_x = round(world_x / 20 - 0.5)
+            tile_y = round(world_y / 20 - 0.5)
 
             self.current_position_world = (world_x, world_y)
 
@@ -1245,10 +1196,10 @@ class Game(arcade.Window):
                         for pos in target_positions:
                             x__, y__ = pos
                             if not y__ < 0:
-                                self.lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
                             else:
                                 y__ = 6000-abs(y__)
-                                self.s_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
                     else:
                         list_of_tile_positions = []
 
@@ -1272,20 +1223,20 @@ class Game(arcade.Window):
                             for pos in list_of_tile_positions:
                                 x__, y__ = pos
                                 if not y__ < 0:
-                                    self.lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                    self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
                                 else:
                                     y__ = 6000-abs(y__)
-                                    self.s_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                    self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
                         else:
                             print(f"no positions")
 
                 elif self.camera.zoom < 2.5:
                     if not tile_y < 0:
                         political_tile_to_edit = tile_x,tile_y
-                        self.political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
+                        self.north_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
                     else:
                         political_tile_to_edit = tile_x,600-abs(tile_y)
-                        self.s_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
+                        self.south_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
 
             else:
                 if self.moving_the_icon == True:
@@ -1334,19 +1285,12 @@ class Game(arcade.Window):
         # x -> origin point changed to the center with '/2' -> zoom amount -> camera offset 
         self.current_position_world = (world_x, world_y)
 
-    def cleanup(self):
-        self.chunk_result_queue.shutdown()
-        self.chunk_request_queue.shutdown()
-
 # ---
 
 def main():
-    multiprocessing.freeze_support()
     print("I- GAME INITIALIZING ...")
-    game = Game(WIDTH, HEIGHT, "NATIONWIDER")
-    # game.setup()
+    Game(WIDTH, HEIGHT, "NATIONWIDER")
     arcade.run()
-    game.cleanup()
 
 
 if __name__ == "__main__":

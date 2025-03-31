@@ -18,19 +18,17 @@
   <a target="code" href="///C:/Users/Aurimas/Desktop/PROGRAMMING/nationwider-git/main.py" type="text/plain"><tt>main.py</tt></a>
 <span class="moduletype">Script</span>  <div class="import">
 imports:
-    <a href="#PIL">PIL</a>
- &#8226;   <a href="#PIL.Image">PIL.Image</a>
- &#8226;   <a href="#_collections_abc">_collections_abc</a>
+    <a href="#_collections_abc">_collections_abc</a>
  &#8226;   <a href="#_weakrefset">_weakrefset</a>
  &#8226;   <a href="#abc">abc</a>
  &#8226;   <a href="#arcade">arcade</a>
  &#8226;   <a href="#arcade.gui">arcade.gui</a>
  &#8226;   <a href="#arcade.gui.widgets">arcade.gui.widgets</a>
- &#8226;   <a href="#array">array</a>
+ &#8226;   <a href="#chunk_gpu">chunk_gpu</a>
  &#8226;   <a href="#codecs">codecs</a>
  &#8226;   <a href="#collections">collections</a>
+ &#8226;   <a href="#concurrent.futures">concurrent.futures</a>
  &#8226;   <a href="#copyreg">copyreg</a>
- &#8226;   <a href="#dataclasses">dataclasses</a>
  &#8226;   <a href="#encodings">encodings</a>
  &#8226;   <a href="#encodings.aliases">encodings.aliases</a>
  &#8226;   <a href="#encodings.ascii">encodings.ascii</a>
@@ -158,11 +156,12 @@ imports:
  &#8226;   <a href="#genericpath">genericpath</a>
  &#8226;   <a href="#heapq">heapq</a>
  &#8226;   <a href="#io">io</a>
- &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#itertools">itertools</a>
  &#8226;   <a href="#keyword">keyword</a>
  &#8226;   <a href="#linecache">linecache</a>
  &#8226;   <a href="#locale">locale</a>
  &#8226;   <a href="#math">math</a>
+ &#8226;   <a href="#multiprocessing">multiprocessing</a>
  &#8226;   <a href="#nation_utils">nation_utils</a>
  &#8226;   <a href="#ntpath">ntpath</a>
  &#8226;   <a href="#numpy">numpy</a>
@@ -329,6 +328,7 @@ imported by:
  &#8226;   <a href="#importlib.resources.readers">importlib.resources.readers</a>
  &#8226;   <a href="#inspect">inspect</a>
  &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy._core._ufunc_config">numpy._core._ufunc_config</a>
  &#8226;   <a href="#numpy._typing._array_like">numpy._typing._array_like</a>
  &#8226;   <a href="#numpy._typing._dtype_like">numpy._typing._dtype_like</a>
  &#8226;   <a href="#numpy._typing._nested_sequence">numpy._typing._nested_sequence</a>
@@ -620,7 +620,7 @@ imported by:
  &#8226;   <a href="#arcade.texture.spritesheet">arcade.texture.spritesheet</a>
  &#8226;   <a href="#arcade.texture.tools">arcade.texture.tools</a>
  &#8226;   <a href="#arcade.texture_atlas.atlas_default">arcade.texture_atlas.atlas_default</a>
- &#8226;   <a href="#main.py">main.py</a>
+ &#8226;   <a href="#nation_utils">nation_utils</a>
  &#8226;   <a href="#pyglet.font.user">pyglet.font.user</a>
  &#8226;   <a href="#pyglet.image.codecs.pil">pyglet.image.codecs.pil</a>
 
@@ -1294,7 +1294,7 @@ imported by:
  &#8226;   <a href="#arcade.texture.tools">arcade.texture.tools</a>
  &#8226;   <a href="#arcade.texture_atlas.atlas_default">arcade.texture_atlas.atlas_default</a>
  &#8226;   <a href="#arcade.texture_atlas.base">arcade.texture_atlas.base</a>
- &#8226;   <a href="#main.py">main.py</a>
+ &#8226;   <a href="#nation_utils">nation_utils</a>
  &#8226;   <a href="#pyglet.font.user">pyglet.font.user</a>
  &#8226;   <a href="#pyglet.image.codecs.pil">pyglet.image.codecs.pil</a>
 
@@ -5341,6 +5341,7 @@ imported by:
  &#8226;   <a href="#arcade.utils">arcade.utils</a>
  &#8226;   <a href="#arcade.version">arcade.version</a>
  &#8226;   <a href="#arcade.window_commands">arcade.window_commands</a>
+ &#8226;   <a href="#chunk_gpu">chunk_gpu</a>
  &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#nation_utils">nation_utils</a>
 
@@ -6393,6 +6394,7 @@ imported by:
  &#8226;   <a href="#arcade.texture_atlas.atlas_default">arcade.texture_atlas.atlas_default</a>
  &#8226;   <a href="#arcade.texture_atlas.base">arcade.texture_atlas.base</a>
  &#8226;   <a href="#arcade.texture_atlas.uv_data">arcade.texture_atlas.uv_data</a>
+ &#8226;   <a href="#chunk_gpu">chunk_gpu</a>
 
   </div>
 
@@ -6578,6 +6580,7 @@ imports:
 imported by:
     <a href="#arcade.experimental.shadertoy">arcade.experimental.shadertoy</a>
  &#8226;   <a href="#arcade.gl">arcade.gl</a>
+ &#8226;   <a href="#chunk_gpu">chunk_gpu</a>
 
   </div>
 
@@ -8984,7 +8987,6 @@ imported by:
  &#8226;   <a href="#arcade.sprite_list.sprite_list">arcade.sprite_list.sprite_list</a>
  &#8226;   <a href="#arcade.texture_atlas.uv_data">arcade.texture_atlas.uv_data</a>
  &#8226;   <a href="#arcade.types">arcade.types</a>
- &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#multiprocessing.dummy">multiprocessing.dummy</a>
  &#8226;   <a href="#multiprocessing.managers">multiprocessing.managers</a>
  &#8226;   <a href="#multiprocessing.reduction">multiprocessing.reduction</a>
@@ -10777,6 +10779,26 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="chunk_gpu"></a>
+  <a target="code" href="///C:/Users/Aurimas/Desktop/PROGRAMMING/nationwider-git/chunk_gpu.py" type="text/plain"><tt>chunk_gpu</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#arcade">arcade</a>
+ &#8226;   <a href="#arcade.gl">arcade.gl</a>
+ &#8226;   <a href="#arcade.gl.geometry">arcade.gl.geometry</a>
+ &#8226;   <a href="#random">random</a>
+ &#8226;   <a href="#struct">struct</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="cmd"></a>
   <a target="code" href="///C:/Users/Aurimas/AppData/Local/Programs/Python/Python313/Lib/cmd.py" type="text/plain"><tt>cmd</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
@@ -11141,6 +11163,7 @@ imported by:
  &#8226;   <a href="#concurrent.futures._base">concurrent.futures._base</a>
  &#8226;   <a href="#concurrent.futures.process">concurrent.futures.process</a>
  &#8226;   <a href="#concurrent.futures.thread">concurrent.futures.thread</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#numpy.testing._private.utils">numpy.testing._private.utils</a>
  &#8226;   <a href="#setuptools._distutils.command.build_ext">setuptools._distutils.command.build_ext</a>
 
@@ -11399,9 +11422,11 @@ imported by:
  &#8226;   <a href="#gettext">gettext</a>
  &#8226;   <a href="#http.cookiejar">http.cookiejar</a>
  &#8226;   <a href="#http.server">http.server</a>
+ &#8226;   <a href="#numpy.f2py.auxfuncs">numpy.f2py.auxfuncs</a>
  &#8226;   <a href="#numpy.f2py.capi_maps">numpy.f2py.capi_maps</a>
  &#8226;   <a href="#numpy.f2py.cfuncs">numpy.f2py.cfuncs</a>
  &#8226;   <a href="#numpy.f2py.crackfortran">numpy.f2py.crackfortran</a>
+ &#8226;   <a href="#numpy.f2py.f2py2e">numpy.f2py.f2py2e</a>
  &#8226;   <a href="#numpy.f2py.func2subr">numpy.f2py.func2subr</a>
  &#8226;   <a href="#numpy.f2py.rules">numpy.f2py.rules</a>
  &#8226;   <a href="#numpy.ma.core">numpy.ma.core</a>
@@ -11843,7 +11868,6 @@ imported by:
  &#8226;   <a href="#arcade.gui.widgets.buttons">arcade.gui.widgets.buttons</a>
  &#8226;   <a href="#arcade.gui.widgets.layout">arcade.gui.widgets.layout</a>
  &#8226;   <a href="#arcade.gui.widgets.slider">arcade.gui.widgets.slider</a>
- &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#packaging._tokenizer">packaging._tokenizer</a>
  &#8226;   <a href="#pprint">pprint</a>
  &#8226;   <a href="#pyglet">pyglet</a>
@@ -15337,6 +15361,7 @@ imported by:
  &#8226;   <a href="#numpy.lib._shape_base_impl">numpy.lib._shape_base_impl</a>
  &#8226;   <a href="#numpy.lib._twodim_base_impl">numpy.lib._twodim_base_impl</a>
  &#8226;   <a href="#numpy.lib._type_check_impl">numpy.lib._type_check_impl</a>
+ &#8226;   <a href="#numpy.lib._ufunclike_impl">numpy.lib._ufunclike_impl</a>
  &#8226;   <a href="#numpy.lib._utils_impl">numpy.lib._utils_impl</a>
  &#8226;   <a href="#numpy.linalg._linalg">numpy.linalg._linalg</a>
  &#8226;   <a href="#numpy.ma.core">numpy.ma.core</a>
@@ -16677,6 +16702,7 @@ imported by:
  &#8226;   <a href="#importlib.resources.abc">importlib.resources.abc</a>
  &#8226;   <a href="#importlib.resources.readers">importlib.resources.readers</a>
  &#8226;   <a href="#inspect">inspect</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#multiprocessing.connection">multiprocessing.connection</a>
  &#8226;   <a href="#multiprocessing.pool">multiprocessing.pool</a>
  &#8226;   <a href="#multiprocessing.process">multiprocessing.process</a>
@@ -16685,6 +16711,7 @@ imported by:
  &#8226;   <a href="#numpy._core.numeric">numpy._core.numeric</a>
  &#8226;   <a href="#numpy._core.shape_base">numpy._core.shape_base</a>
  &#8226;   <a href="#numpy.f2py._backends._meson">numpy.f2py._backends._meson</a>
+ &#8226;   <a href="#numpy.f2py.f2py2e">numpy.f2py.f2py2e</a>
  &#8226;   <a href="#numpy.lib._npyio_impl">numpy.lib._npyio_impl</a>
  &#8226;   <a href="#numpy.lib.recfunctions">numpy.lib.recfunctions</a>
  &#8226;   <a href="#numpy.ma.extras">numpy.ma.extras</a>
@@ -16864,7 +16891,7 @@ imported by:
  &#8226;   <a href="#json.decoder">json.decoder</a>
  &#8226;   <a href="#json.encoder">json.encoder</a>
  &#8226;   <a href="#json.scanner">json.scanner</a>
- &#8226;   <a href="#main.py">main.py</a>
+ &#8226;   <a href="#nation_utils">nation_utils</a>
  &#8226;   <a href="#numpy.__config__">numpy.__config__</a>
  &#8226;   <a href="#pyglet.model.codecs.gltf">pyglet.model.codecs.gltf</a>
  &#8226;   <a href="#pytiled_parser.parser">pytiled_parser.parser</a>
@@ -17301,6 +17328,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#concurrent.futures.process">concurrent.futures.process</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#multiprocessing">multiprocessing</a>
  &#8226;   <a href="#multiprocessing.connection">multiprocessing.connection</a>
  &#8226;   <a href="#multiprocessing.context">multiprocessing.context</a>
@@ -17323,6 +17351,7 @@ imported by:
  &#8226;   <a href="#multiprocessing.spawn">multiprocessing.spawn</a>
  &#8226;   <a href="#multiprocessing.synchronize">multiprocessing.synchronize</a>
  &#8226;   <a href="#multiprocessing.util">multiprocessing.util</a>
+ &#8226;   <a href="#nation_utils">nation_utils</a>
  &#8226;   <a href="#pyi_rth_multiprocessing.py">pyi_rth_multiprocessing.py</a>
 
   </div>
@@ -18076,10 +18105,15 @@ imported by:
   <a target="code" href="///C:/Users/Aurimas/Desktop/PROGRAMMING/nationwider-git/nation_utils.py" type="text/plain"><tt>nation_utils</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#arcade">arcade</a>
+    <a href="#PIL">PIL</a>
+ &#8226;   <a href="#PIL.Image">PIL.Image</a>
+ &#8226;   <a href="#arcade">arcade</a>
  &#8226;   <a href="#arcade.gui">arcade.gui</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#multiprocessing">multiprocessing</a>
  &#8226;   <a href="#numpy">numpy</a>
  &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#time">time</a>
 
   </div>
   <div class="import">
@@ -18315,7 +18349,6 @@ imports:
  &#8226;   <a href="#numpy._core.longdouble">numpy._core.longdouble</a>
  &#8226;   <a href="#numpy._core.matmul">numpy._core.matmul</a>
  &#8226;   <a href="#numpy._core.matrix_transpose">numpy._core.matrix_transpose</a>
- &#8226;   <a href="#numpy._core.matvec">numpy._core.matvec</a>
  &#8226;   <a href="#numpy._core.max">numpy._core.max</a>
  &#8226;   <a href="#numpy._core.maximum">numpy._core.maximum</a>
  &#8226;   <a href="#numpy._core.memmap">numpy._core.memmap</a>
@@ -18378,7 +18411,6 @@ imports:
  &#8226;   <a href="#numpy._core.unsignedinteger">numpy._core.unsignedinteger</a>
  &#8226;   <a href="#numpy._core.ushort">numpy._core.ushort</a>
  &#8226;   <a href="#numpy._core.vecdot">numpy._core.vecdot</a>
- &#8226;   <a href="#numpy._core.vecmat">numpy._core.vecmat</a>
  &#8226;   <a href="#numpy._core.void">numpy._core.void</a>
  &#8226;   <a href="#numpy._core.vstack">numpy._core.vstack</a>
  &#8226;   <a href="#numpy._core.zeros">numpy._core.zeros</a>
@@ -18455,7 +18487,6 @@ imported by:
  &#8226;   <a href="#numpy._typing._array_like">numpy._typing._array_like</a>
  &#8226;   <a href="#numpy._typing._dtype_like">numpy._typing._dtype_like</a>
  &#8226;   <a href="#numpy._typing._scalars">numpy._typing._scalars</a>
- &#8226;   <a href="#numpy._typing._ufunc">numpy._typing._ufunc</a>
  &#8226;   <a href="#numpy._utils">numpy._utils</a>
  &#8226;   <a href="#numpy.char">numpy.char</a>
  &#8226;   <a href="#numpy.core">numpy.core</a>
@@ -18591,7 +18622,6 @@ imports:
  &#8226;   <a href="#numpy._core.array">numpy._core.array</a>
  &#8226;   <a href="#numpy._core.array2string">numpy._core.array2string</a>
  &#8226;   <a href="#numpy._core.array_repr">numpy._core.array_repr</a>
- &#8226;   <a href="#numpy._core.arrayprint">numpy._core.arrayprint</a>
  &#8226;   <a href="#numpy._core.asanyarray">numpy._core.asanyarray</a>
  &#8226;   <a href="#numpy._core.asarray">numpy._core.asarray</a>
  &#8226;   <a href="#numpy._core.atleast_1d">numpy._core.atleast_1d</a>
@@ -18692,7 +18722,6 @@ imports:
  &#8226;   <a href="#numpy._core.longdouble">numpy._core.longdouble</a>
  &#8226;   <a href="#numpy._core.matmul">numpy._core.matmul</a>
  &#8226;   <a href="#numpy._core.matrix_transpose">numpy._core.matrix_transpose</a>
- &#8226;   <a href="#numpy._core.matvec">numpy._core.matvec</a>
  &#8226;   <a href="#numpy._core.max">numpy._core.max</a>
  &#8226;   <a href="#numpy._core.maximum">numpy._core.maximum</a>
  &#8226;   <a href="#numpy._core.memmap">numpy._core.memmap</a>
@@ -18761,7 +18790,6 @@ imports:
  &#8226;   <a href="#numpy._core.unsignedinteger">numpy._core.unsignedinteger</a>
  &#8226;   <a href="#numpy._core.ushort">numpy._core.ushort</a>
  &#8226;   <a href="#numpy._core.vecdot">numpy._core.vecdot</a>
- &#8226;   <a href="#numpy._core.vecmat">numpy._core.vecmat</a>
  &#8226;   <a href="#numpy._core.void">numpy._core.void</a>
  &#8226;   <a href="#numpy._core.vstack">numpy._core.vstack</a>
  &#8226;   <a href="#numpy._core.zeros">numpy._core.zeros</a>
@@ -19000,6 +19028,7 @@ imports:
  &#8226;   <a href="#numpy">numpy</a>
  &#8226;   <a href="#numpy._core">numpy._core</a>
  &#8226;   <a href="#numpy._core._exceptions">numpy._core._exceptions</a>
+ &#8226;   <a href="#numpy._core._ufunc_config">numpy._core._ufunc_config</a>
  &#8226;   <a href="#numpy._core.multiarray">numpy._core.multiarray</a>
  &#8226;   <a href="#numpy._core.numerictypes">numpy._core.numerictypes</a>
  &#8226;   <a href="#numpy._core.umath">numpy._core.umath</a>
@@ -19100,7 +19129,8 @@ imported by:
   <a target="code" href="///C:/Users/Aurimas/Desktop/PROGRAMMING/nationwider-git/Lib/site-packages/numpy/_core/_ufunc_config.py" type="text/plain"><tt>numpy._core._ufunc_config</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#contextlib">contextlib</a>
+    <a href="#'collections.abc'">'collections.abc'</a>
+ &#8226;   <a href="#contextlib">contextlib</a>
  &#8226;   <a href="#contextvars">contextvars</a>
  &#8226;   <a href="#functools">functools</a>
  &#8226;   <a href="#numpy._core">numpy._core</a>
@@ -19111,6 +19141,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#numpy._core._machar">numpy._core._machar</a>
+ &#8226;   <a href="#numpy._core._methods">numpy._core._methods</a>
  &#8226;   <a href="#numpy._core.numeric">numpy._core.numeric</a>
 
   </div>
@@ -19348,8 +19379,7 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#numpy._core">numpy._core</a>
- &#8226;   <a href="#numpy._core.numeric">numpy._core.numeric</a>
+    <a href="#numpy._core.numeric">numpy._core.numeric</a>
  &#8226;   <a href="#numpy._core.records">numpy._core.records</a>
 
   </div>
@@ -20190,7 +20220,6 @@ imports:
  &#8226;   <a href="#numpy._core.numerictypes">numpy._core.numerictypes</a>
  &#8226;   <a href="#numpy._core.umath">numpy._core.umath</a>
  &#8226;   <a href="#numpy._utils">numpy._utils</a>
- &#8226;   <a href="#types">types</a>
  &#8226;   <a href="#warnings">warnings</a>
 
   </div>
@@ -20695,18 +20724,6 @@ imported by:
 </div>
 
 <div class="node">
-  <a name="numpy._core.matvec"></a>
-  <a target="code" href="" type="text/plain"><tt>numpy._core.matvec</tt></a>
-<span class="moduletype">MissingModule</span>  <div class="import">
-imported by:
-    <a href="#numpy">numpy</a>
- &#8226;   <a href="#numpy._core">numpy._core</a>
-
-  </div>
-
-</div>
-
-<div class="node">
   <a name="numpy._core.max"></a>
   <a target="code" href="" type="text/plain"><tt>numpy._core.max</tt></a>
 <span class="moduletype">MissingModule</span>  <div class="import">
@@ -20831,7 +20848,6 @@ imported by:
  &#8226;   <a href="#numpy._core.numerictypes">numpy._core.numerictypes</a>
  &#8226;   <a href="#numpy._core.shape_base">numpy._core.shape_base</a>
  &#8226;   <a href="#numpy._core.strings">numpy._core.strings</a>
- &#8226;   <a href="#numpy._typing._array_like">numpy._typing._array_like</a>
  &#8226;   <a href="#numpy.ctypeslib">numpy.ctypeslib</a>
  &#8226;   <a href="#numpy.lib._function_base_impl">numpy.lib._function_base_impl</a>
  &#8226;   <a href="#numpy.lib._index_tricks_impl">numpy.lib._index_tricks_impl</a>
@@ -20972,6 +20988,7 @@ imported by:
  &#8226;   <a href="#numpy.lib._type_check_impl">numpy.lib._type_check_impl</a>
  &#8226;   <a href="#numpy.lib._ufunclike_impl">numpy.lib._ufunclike_impl</a>
  &#8226;   <a href="#numpy.ma.core">numpy.ma.core</a>
+ &#8226;   <a href="#numpy.ma.extras">numpy.ma.extras</a>
  &#8226;   <a href="#numpy.matrixlib.defmatrix">numpy.matrixlib.defmatrix</a>
 
   </div>
@@ -21066,6 +21083,7 @@ imports:
  &#8226;   <a href="#numpy._core._multiarray_umath">numpy._core._multiarray_umath</a>
  &#8226;   <a href="#numpy._utils">numpy._utils</a>
  &#8226;   <a href="#numpy._utils._inspect">numpy._utils._inspect</a>
+ &#8226;   <a href="#os">os</a>
 
   </div>
   <div class="import">
@@ -21081,7 +21099,6 @@ imported by:
  &#8226;   <a href="#numpy._core.multiarray">numpy._core.multiarray</a>
  &#8226;   <a href="#numpy._core.numeric">numpy._core.numeric</a>
  &#8226;   <a href="#numpy._core.shape_base">numpy._core.shape_base</a>
- &#8226;   <a href="#numpy._core.strings">numpy._core.strings</a>
  &#8226;   <a href="#numpy.fft._helper">numpy.fft._helper</a>
  &#8226;   <a href="#numpy.fft._pocketfft">numpy.fft._pocketfft</a>
  &#8226;   <a href="#numpy.lib._arraypad_impl">numpy.lib._arraypad_impl</a>
@@ -21231,6 +21248,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#numpy._core">numpy._core</a>
+ &#8226;   <a href="#numpy.lib.recfunctions">numpy.lib.recfunctions</a>
+ &#8226;   <a href="#numpy.ma.mrecords">numpy.ma.mrecords</a>
  &#8226;   <a href="#numpy.rec">numpy.rec</a>
 
   </div>
@@ -21300,6 +21319,7 @@ imports:
  &#8226;   <a href="#numpy._core.numeric">numpy._core.numeric</a>
  &#8226;   <a href="#numpy._core.overrides">numpy._core.overrides</a>
  &#8226;   <a href="#operator">operator</a>
+ &#8226;   <a href="#warnings">warnings</a>
 
   </div>
   <div class="import">
@@ -21458,7 +21478,6 @@ imports:
     <a href="#numpy">numpy</a>
  &#8226;   <a href="#numpy._core">numpy._core</a>
  &#8226;   <a href="#numpy._core.multiarray">numpy._core.multiarray</a>
- &#8226;   <a href="#numpy._core.overrides">numpy._core.overrides</a>
  &#8226;   <a href="#numpy._core.umath">numpy._core.umath</a>
  &#8226;   <a href="#sys">sys</a>
 
@@ -21788,18 +21807,6 @@ imported by:
 </div>
 
 <div class="node">
-  <a name="numpy._core.vecmat"></a>
-  <a target="code" href="" type="text/plain"><tt>numpy._core.vecmat</tt></a>
-<span class="moduletype">MissingModule</span>  <div class="import">
-imported by:
-    <a href="#numpy">numpy</a>
- &#8226;   <a href="#numpy._core">numpy._core</a>
-
-  </div>
-
-</div>
-
-<div class="node">
   <a name="numpy._core.void"></a>
   <a target="code" href="" type="text/plain"><tt>numpy._core.void</tt></a>
 <span class="moduletype">MissingModule</span>  <div class="import">
@@ -21944,11 +21951,12 @@ imports:
  &#8226;   <a href="#numpy._typing._char_codes">numpy._typing._char_codes</a>
  &#8226;   <a href="#numpy._typing._dtype_like">numpy._typing._dtype_like</a>
  &#8226;   <a href="#numpy._typing._nbit">numpy._typing._nbit</a>
- &#8226;   <a href="#numpy._typing._nbit_base">numpy._typing._nbit_base</a>
  &#8226;   <a href="#numpy._typing._nested_sequence">numpy._typing._nested_sequence</a>
  &#8226;   <a href="#numpy._typing._scalars">numpy._typing._scalars</a>
  &#8226;   <a href="#numpy._typing._shape">numpy._typing._shape</a>
  &#8226;   <a href="#numpy._typing._ufunc">numpy._typing._ufunc</a>
+ &#8226;   <a href="#numpy._utils">numpy._utils</a>
+ &#8226;   <a href="#typing">typing</a>
 
   </div>
   <div class="import">
@@ -21958,11 +21966,9 @@ imported by:
  &#8226;   <a href="#numpy._typing._char_codes">numpy._typing._char_codes</a>
  &#8226;   <a href="#numpy._typing._dtype_like">numpy._typing._dtype_like</a>
  &#8226;   <a href="#numpy._typing._nbit">numpy._typing._nbit</a>
- &#8226;   <a href="#numpy._typing._nbit_base">numpy._typing._nbit_base</a>
  &#8226;   <a href="#numpy._typing._nested_sequence">numpy._typing._nested_sequence</a>
  &#8226;   <a href="#numpy._typing._scalars">numpy._typing._scalars</a>
  &#8226;   <a href="#numpy._typing._shape">numpy._typing._shape</a>
- &#8226;   <a href="#numpy._typing._ufunc">numpy._typing._ufunc</a>
  &#8226;   <a href="#numpy.linalg._linalg">numpy.linalg._linalg</a>
  &#8226;   <a href="#numpy.typing">numpy.typing</a>
 
@@ -21997,11 +22003,8 @@ imports:
     <a href="#'collections.abc'">'collections.abc'</a>
  &#8226;   <a href="#__future__">__future__</a>
  &#8226;   <a href="#numpy">numpy</a>
- &#8226;   <a href="#numpy._core.multiarray">numpy._core.multiarray</a>
  &#8226;   <a href="#numpy._typing">numpy._typing</a>
- &#8226;   <a href="#numpy._typing._nbit_base">numpy._typing._nbit_base</a>
  &#8226;   <a href="#numpy._typing._nested_sequence">numpy._typing._nested_sequence</a>
- &#8226;   <a href="#numpy._typing._shape">numpy._typing._shape</a>
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#typing">typing</a>
 
@@ -22060,33 +22063,12 @@ imported by:
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
     <a href="#numpy._typing">numpy._typing</a>
- &#8226;   <a href="#numpy._typing._nbit_base">numpy._typing._nbit_base</a>
  &#8226;   <a href="#typing">typing</a>
 
   </div>
   <div class="import">
 imported by:
     <a href="#numpy._typing">numpy._typing</a>
-
-  </div>
-
-</div>
-
-<div class="node">
-  <a name="numpy._typing._nbit_base"></a>
-  <a target="code" href="///C:/Users/Aurimas/Desktop/PROGRAMMING/nationwider-git/Lib/site-packages/numpy/_typing/_nbit_base.py" type="text/plain"><tt>numpy._typing._nbit_base</tt></a>
-<span class="moduletype">SourceModule</span>  <div class="import">
-imports:
-    <a href="#numpy._typing">numpy._typing</a>
- &#8226;   <a href="#numpy._utils">numpy._utils</a>
- &#8226;   <a href="#typing">typing</a>
-
-  </div>
-  <div class="import">
-imported by:
-    <a href="#numpy._typing">numpy._typing</a>
- &#8226;   <a href="#numpy._typing._array_like">numpy._typing._array_like</a>
- &#8226;   <a href="#numpy._typing._nbit">numpy._typing._nbit</a>
 
   </div>
 
@@ -22143,7 +22125,6 @@ imports:
   <div class="import">
 imported by:
     <a href="#numpy._typing">numpy._typing</a>
- &#8226;   <a href="#numpy._typing._array_like">numpy._typing._array_like</a>
  &#8226;   <a href="#numpy._typing._dtype_like">numpy._typing._dtype_like</a>
 
   </div>
@@ -22152,14 +22133,8 @@ imported by:
 
 <div class="node">
   <a name="numpy._typing._ufunc"></a>
-  <a target="code" href="///C:/Users/Aurimas/Desktop/PROGRAMMING/nationwider-git/Lib/site-packages/numpy/_typing/_ufunc.py" type="text/plain"><tt>numpy._typing._ufunc</tt></a>
-<span class="moduletype">SourceModule</span>  <div class="import">
-imports:
-    <a href="#numpy">numpy</a>
- &#8226;   <a href="#numpy._typing">numpy._typing</a>
-
-  </div>
-  <div class="import">
+  <a target="code" href="" type="text/plain"><tt>numpy._typing._ufunc</tt></a>
+<span class="moduletype">MissingModule</span>  <div class="import">
 imported by:
     <a href="#numpy._typing">numpy._typing</a>
 
@@ -22191,7 +22166,7 @@ imported by:
  &#8226;   <a href="#numpy._core.overrides">numpy._core.overrides</a>
  &#8226;   <a href="#numpy._core.records">numpy._core.records</a>
  &#8226;   <a href="#numpy._globals">numpy._globals</a>
- &#8226;   <a href="#numpy._typing._nbit_base">numpy._typing._nbit_base</a>
+ &#8226;   <a href="#numpy._typing">numpy._typing</a>
  &#8226;   <a href="#numpy._utils._convertions">numpy._utils._convertions</a>
  &#8226;   <a href="#numpy._utils._inspect">numpy._utils._inspect</a>
  &#8226;   <a href="#numpy.lib._array_utils_impl">numpy.lib._array_utils_impl</a>
@@ -22518,6 +22493,7 @@ imports:
  &#8226;   <a href="#string">string</a>
  &#8226;   <a href="#subprocess">subprocess</a>
  &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#warnings">warnings</a>
 
   </div>
   <div class="import">
@@ -22550,7 +22526,8 @@ imported by:
   <a target="code" href="///C:/Users/Aurimas/Desktop/PROGRAMMING/nationwider-git/Lib/site-packages/numpy/f2py/auxfuncs.py" type="text/plain"><tt>numpy.f2py.auxfuncs</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#functools">functools</a>
+    <a href="#copy">copy</a>
+ &#8226;   <a href="#functools">functools</a>
  &#8226;   <a href="#numpy.f2py">numpy.f2py</a>
  &#8226;   <a href="#numpy.f2py.__version__">numpy.f2py.__version__</a>
  &#8226;   <a href="#numpy.f2py.capi_maps">numpy.f2py.capi_maps</a>
@@ -22740,6 +22717,8 @@ imported by:
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
     <a href="#argparse">argparse</a>
+ &#8226;   <a href="#copy">copy</a>
+ &#8226;   <a href="#itertools">itertools</a>
  &#8226;   <a href="#numpy.f2py">numpy.f2py</a>
  &#8226;   <a href="#numpy.f2py.__version__">numpy.f2py.__version__</a>
  &#8226;   <a href="#numpy.f2py._backends">numpy.f2py._backends</a>
@@ -22751,6 +22730,7 @@ imports:
  &#8226;   <a href="#numpy.f2py.f90mod_rules">numpy.f2py.f90mod_rules</a>
  &#8226;   <a href="#numpy.f2py.rules">numpy.f2py.rules</a>
  &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
  &#8226;   <a href="#pprint">pprint</a>
  &#8226;   <a href="#re">re</a>
  &#8226;   <a href="#sys">sys</a>
@@ -23531,9 +23511,11 @@ imported by:
   <a target="code" href="///C:/Users/Aurimas/Desktop/PROGRAMMING/nationwider-git/Lib/site-packages/numpy/lib/_ufunclike_impl.py" type="text/plain"><tt>numpy.lib._ufunclike_impl</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#numpy._core.numeric">numpy._core.numeric</a>
+    <a href="#functools">functools</a>
+ &#8226;   <a href="#numpy._core.numeric">numpy._core.numeric</a>
  &#8226;   <a href="#numpy._core.overrides">numpy._core.overrides</a>
  &#8226;   <a href="#numpy.lib">numpy.lib</a>
+ &#8226;   <a href="#warnings">warnings</a>
 
   </div>
   <div class="import">
@@ -23564,6 +23546,7 @@ imports:
  &#8226;   <a href="#platform">platform</a>
  &#8226;   <a href="#pprint">pprint</a>
  &#8226;   <a href="#pydoc">pydoc</a>
+ &#8226;   <a href="#re">re</a>
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#textwrap">textwrap</a>
  &#8226;   <a href="#threadpoolctl">threadpoolctl</a>
@@ -23711,6 +23694,7 @@ imports:
     <a href="#itertools">itertools</a>
  &#8226;   <a href="#numpy">numpy</a>
  &#8226;   <a href="#numpy._core.overrides">numpy._core.overrides</a>
+ &#8226;   <a href="#numpy._core.records">numpy._core.records</a>
  &#8226;   <a href="#numpy.lib">numpy.lib</a>
  &#8226;   <a href="#numpy.lib._iotools">numpy.lib._iotools</a>
  &#8226;   <a href="#numpy.ma">numpy.ma</a>
@@ -23975,6 +23959,7 @@ imported by:
 imports:
     <a href="#itertools">itertools</a>
  &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#numpy._core.numeric">numpy._core.numeric</a>
  &#8226;   <a href="#numpy.lib._function_base_impl">numpy.lib._function_base_impl</a>
  &#8226;   <a href="#numpy.lib._index_tricks_impl">numpy.lib._index_tricks_impl</a>
  &#8226;   <a href="#numpy.lib.array_utils">numpy.lib.array_utils</a>
@@ -23997,6 +23982,7 @@ imported by:
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
     <a href="#numpy">numpy</a>
+ &#8226;   <a href="#numpy._core.records">numpy._core.records</a>
  &#8226;   <a href="#numpy.ma">numpy.ma</a>
  &#8226;   <a href="#warnings">warnings</a>
 
@@ -24661,7 +24647,6 @@ imports:
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#sysconfig">sysconfig</a>
  &#8226;   <a href="#tempfile">tempfile</a>
- &#8226;   <a href="#threading">threading</a>
  &#8226;   <a href="#time">time</a>
  &#8226;   <a href="#traceback">traceback</a>
  &#8226;   <a href="#unittest">unittest</a>
@@ -24975,6 +24960,7 @@ imported by:
  &#8226;   <a href="#numpy._core">numpy._core</a>
  &#8226;   <a href="#numpy._core._add_newdocs_scalars">numpy._core._add_newdocs_scalars</a>
  &#8226;   <a href="#numpy._core._methods">numpy._core._methods</a>
+ &#8226;   <a href="#numpy._core.overrides">numpy._core.overrides</a>
  &#8226;   <a href="#numpy._core.records">numpy._core.records</a>
  &#8226;   <a href="#numpy._pytesttester">numpy._pytesttester</a>
  &#8226;   <a href="#numpy.ctypeslib">numpy.ctypeslib</a>
@@ -25623,6 +25609,7 @@ imported by:
  &#8226;   <a href="#numpy">numpy</a>
  &#8226;   <a href="#numpy.f2py._backends._meson">numpy.f2py._backends._meson</a>
  &#8226;   <a href="#numpy.f2py.crackfortran">numpy.f2py.crackfortran</a>
+ &#8226;   <a href="#numpy.f2py.f2py2e">numpy.f2py.f2py2e</a>
  &#8226;   <a href="#numpy.f2py.rules">numpy.f2py.rules</a>
  &#8226;   <a href="#numpy.testing._private.extbuild">numpy.testing._private.extbuild</a>
  &#8226;   <a href="#packaging.metadata">packaging.metadata</a>
@@ -33094,6 +33081,7 @@ imported by:
  &#8226;   <a href="#arcade.perf_graph">arcade.perf_graph</a>
  &#8226;   <a href="#arcade.sprite_list.sprite_list">arcade.sprite_list.sprite_list</a>
  &#8226;   <a href="#arcade.types.color">arcade.types.color</a>
+ &#8226;   <a href="#chunk_gpu">chunk_gpu</a>
  &#8226;   <a href="#email.generator">email.generator</a>
  &#8226;   <a href="#email.utils">email.utils</a>
  &#8226;   <a href="#main.py">main.py</a>
@@ -33206,6 +33194,7 @@ imported by:
  &#8226;   <a href="#numpy.lib._function_base_impl">numpy.lib._function_base_impl</a>
  &#8226;   <a href="#numpy.lib._npyio_impl">numpy.lib._npyio_impl</a>
  &#8226;   <a href="#numpy.lib._polynomial_impl">numpy.lib._polynomial_impl</a>
+ &#8226;   <a href="#numpy.lib._utils_impl">numpy.lib._utils_impl</a>
  &#8226;   <a href="#numpy.lib._version">numpy.lib._version</a>
  &#8226;   <a href="#numpy.lib.introspect">numpy.lib.introspect</a>
  &#8226;   <a href="#numpy.ma.core">numpy.ma.core</a>
@@ -38349,6 +38338,7 @@ imported by:
  &#8226;   <a href="#arcade.sprite_list.collision">arcade.sprite_list.collision</a>
  &#8226;   <a href="#asyncio.windows_events">asyncio.windows_events</a>
  &#8226;   <a href="#base64">base64</a>
+ &#8226;   <a href="#chunk_gpu">chunk_gpu</a>
  &#8226;   <a href="#ctypes">ctypes</a>
  &#8226;   <a href="#ctypes.util">ctypes.util</a>
  &#8226;   <a href="#gettext">gettext</a>
@@ -38991,7 +38981,6 @@ imported by:
  &#8226;   <a href="#multiprocessing.resource_tracker">multiprocessing.resource_tracker</a>
  &#8226;   <a href="#multiprocessing.synchronize">multiprocessing.synchronize</a>
  &#8226;   <a href="#multiprocessing.util">multiprocessing.util</a>
- &#8226;   <a href="#numpy.testing._private.utils">numpy.testing._private.utils</a>
  &#8226;   <a href="#pydoc">pydoc</a>
  &#8226;   <a href="#pyglet.app.base">pyglet.app.base</a>
  &#8226;   <a href="#pyglet.app.xlib">pyglet.app.xlib</a>
@@ -39064,6 +39053,7 @@ imported by:
  &#8226;   <a href="#multiprocessing.pool">multiprocessing.pool</a>
  &#8226;   <a href="#multiprocessing.queues">multiprocessing.queues</a>
  &#8226;   <a href="#multiprocessing.synchronize">multiprocessing.synchronize</a>
+ &#8226;   <a href="#nation_utils">nation_utils</a>
  &#8226;   <a href="#numpy.f2py.rules">numpy.f2py.rules</a>
  &#8226;   <a href="#numpy.testing._private.utils">numpy.testing._private.utils</a>
  &#8226;   <a href="#pkg_resources">pkg_resources</a>
@@ -39408,7 +39398,6 @@ imported by:
  &#8226;   <a href="#multiprocessing.spawn">multiprocessing.spawn</a>
  &#8226;   <a href="#numpy._core.fromnumeric">numpy._core.fromnumeric</a>
  &#8226;   <a href="#numpy._core.function_base">numpy._core.function_base</a>
- &#8226;   <a href="#numpy._core.getlimits">numpy._core.getlimits</a>
  &#8226;   <a href="#numpy._utils._inspect">numpy._utils._inspect</a>
  &#8226;   <a href="#numpy.f2py.auxfuncs">numpy.f2py.auxfuncs</a>
  &#8226;   <a href="#numpy.lib._utils_impl">numpy.lib._utils_impl</a>
@@ -39619,11 +39608,11 @@ imported by:
  &#8226;   <a href="#importlib.metadata._meta">importlib.metadata._meta</a>
  &#8226;   <a href="#importlib.resources._common">importlib.resources._common</a>
  &#8226;   <a href="#importlib.resources.abc">importlib.resources.abc</a>
+ &#8226;   <a href="#numpy._typing">numpy._typing</a>
  &#8226;   <a href="#numpy._typing._array_like">numpy._typing._array_like</a>
  &#8226;   <a href="#numpy._typing._char_codes">numpy._typing._char_codes</a>
  &#8226;   <a href="#numpy._typing._dtype_like">numpy._typing._dtype_like</a>
  &#8226;   <a href="#numpy._typing._nbit">numpy._typing._nbit</a>
- &#8226;   <a href="#numpy._typing._nbit_base">numpy._typing._nbit_base</a>
  &#8226;   <a href="#numpy._typing._nested_sequence">numpy._typing._nested_sequence</a>
  &#8226;   <a href="#numpy._typing._scalars">numpy._typing._scalars</a>
  &#8226;   <a href="#numpy._typing._shape">numpy._typing._shape</a>
@@ -40534,11 +40523,13 @@ imported by:
  &#8226;   <a href="#numpy._core.numeric">numpy._core.numeric</a>
  &#8226;   <a href="#numpy._core.numerictypes">numpy._core.numerictypes</a>
  &#8226;   <a href="#numpy._core.records">numpy._core.records</a>
+ &#8226;   <a href="#numpy._core.shape_base">numpy._core.shape_base</a>
  &#8226;   <a href="#numpy._pytesttester">numpy._pytesttester</a>
  &#8226;   <a href="#numpy._utils">numpy._utils</a>
  &#8226;   <a href="#numpy.core._utils">numpy.core._utils</a>
  &#8226;   <a href="#numpy.f2py">numpy.f2py</a>
  &#8226;   <a href="#numpy.f2py._backends._distutils">numpy.f2py._backends._distutils</a>
+ &#8226;   <a href="#numpy.f2py._backends._meson">numpy.f2py._backends._meson</a>
  &#8226;   <a href="#numpy.f2py.symbolic">numpy.f2py.symbolic</a>
  &#8226;   <a href="#numpy.fft._pocketfft">numpy.fft._pocketfft</a>
  &#8226;   <a href="#numpy.fft.helper">numpy.fft.helper</a>
@@ -40551,6 +40542,7 @@ imported by:
  &#8226;   <a href="#numpy.lib._npyio_impl">numpy.lib._npyio_impl</a>
  &#8226;   <a href="#numpy.lib._polynomial_impl">numpy.lib._polynomial_impl</a>
  &#8226;   <a href="#numpy.lib._shape_base_impl">numpy.lib._shape_base_impl</a>
+ &#8226;   <a href="#numpy.lib._ufunclike_impl">numpy.lib._ufunclike_impl</a>
  &#8226;   <a href="#numpy.lib._utils_impl">numpy.lib._utils_impl</a>
  &#8226;   <a href="#numpy.lib.format">numpy.lib.format</a>
  &#8226;   <a href="#numpy.linalg._linalg">numpy.linalg._linalg</a>

@@ -76,6 +76,8 @@ class Game(arcade.Window):
         self.selected_line          = None
         self.drawing_line_start     = None
         self.drawing_line_end       = None
+
+        self.last_hovered_political = None
         print("O- variables set up")
 
         print("?- setting up view layers ...")
@@ -138,12 +140,6 @@ class Game(arcade.Window):
             'lines': []
         }
         print("O- grids set up / icons dict initialized")
-
-        epalette = [random.randint(0, 255) for _ in range(256 * 4)]
-        etiles = [random.randint(0, 255) for _ in range(12000 * 6000)]
-        self.color_chunk = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(12000, 6000), colors=bytes(epalette), data=bytes(etiles)
-        )
 
         keybinds_anchor = self.ui.add(arcade.gui.UIAnchorLayout())
         self.keybinds_box = keybinds_anchor.add(arcade.gui.UIBoxLayout(space_between=0), anchor_x="center", anchor_y="center")
@@ -877,8 +873,9 @@ class Game(arcade.Window):
             else:
                 arcade.draw_circle_outline(self.current_position_world[0],self.current_position_world[1],2,(255,255,255,255),0.2,0,-1)
         
+        if self.last_hovered_political:
+            self.on_notification_toast(f"hovering over {self.last_hovered_political.id_}")
         self.ui.draw()
-        self.color_chunk.draw()
 
     def on_key_press(self, symbol, modifier):
         if symbol   == arcade.key.W or symbol == arcade.key.UP:
@@ -1455,6 +1452,7 @@ class Game(arcade.Window):
         tile_x = round(world_x / 20)
         tile_y = round(world_y / 20)
         self.last_interacted_tile = self.upper_terrain_layer.__getitem__((tile_x, tile_y))
+        self.last_hovered_political=self.political_layer.__getitem__((tile_x,tile_y))
 
     def cleanup(self):
         self.chunk_result_queue.shutdown()
