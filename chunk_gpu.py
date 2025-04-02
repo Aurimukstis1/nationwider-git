@@ -84,7 +84,7 @@ class ColorChunk:
 
     def read_tile(self, position: tuple[int, int]) -> tuple[int, int, int, int]:
         """Read a pixel."""
-        data = self._fbo.read(components=4, dtype="u1", viewport=(position[0], position[1], 1, 1))
+        data = self._fbo.read(components=1, dtype="u1", viewport=(position[0], position[1], 1, 1))
         return struct.unpack("B", data)
 
     def write_tile(self, position: tuple[int, int], tile_id: int):

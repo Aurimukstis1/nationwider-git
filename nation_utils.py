@@ -90,6 +90,50 @@ def get_pixel_coordinates(image_path:str) -> list:
     return coordinates
 
 #---
+CLIMATE_ID_MAP = {
+    0: (0, 0, 0), #none
+    # --- A 
+    1: (0, 0, 255), #Af (Rainforest)
+    2: (0, 120, 255), #Am (Monsoon)
+    3: (70, 170, 250), #Aw (Savanna, dry winter)
+    4: (121, 186, 236), #As (Savanna, dry summer)
+    # --- B
+    5: (255, 0, 0), # BWh (Arid desert) (Hot)
+    6: (255, 150, 150), # BWk (Arid desert) (Cold)
+    7: (245, 165, 0), # BSh (Semi-arid steppe) (Hot)
+    8: (255, 220, 100), # BSk (Semi-arid steppe) (Cold)
+    # --- C
+    9: (150, 255, 150), # Cwa (Dry winter) (Hot summer)
+    10:(100, 200, 100), # Cwb (Dry winter) (Warm summer)
+    11:(50, 150, 50), # Cwc (Dry winter) (Cold summer)
+
+    12:(200, 255, 80), # Cfa (No dry season) (Hot summer)
+    13:(100, 255, 80), # Cfb (No dry season) (Warm summer)
+    14:(50, 200, 0), # Cfc (No dry season) (Cold summer)
+
+    15:(255, 255, 0), # Csa (Dry summer) (Hot summer)
+    16:(200, 200, 0), # Csb (Dry summer) (Warm summer)
+    17:(150, 150, 0), # Csc (Dry summer) (Cold summer)
+    # --- D
+    18:(170, 175, 255), # Dwa (Dry winter) (Hot summer)
+    19:(90, 120, 220), # Dwb (Dry winter) (Warm summer)
+    20:(75, 80, 180), # Dwc (Dry winter) (Cold summer)
+    21:(50, 0, 135), # Dwd (Dry winter) (Very cold winter)
+
+    22:(0, 255, 255), # Dfa (No dry season) (Hot summer)
+    23:(55, 200, 255), # Dfb (No dry season) (Warm summer)
+    24:(0,125,125), # Dfc (No dry season) (Cold summer)
+    25:(0, 70, 95), # Dfd (No dry season) (Very cold winter)
+
+    26:(255, 0, 255), # Dsa (Dry summer) (Hot summer)
+    27:(200, 0, 200), # Dsb (Dry summer) (Warm summer)
+    28:(150, 50, 150), # Dsc (Dry summer) (Cold summer)
+    29:(150, 100, 150), # Dsd (Dry summer) (Very cold winter)
+    # --- E
+    30:(178, 178, 178), # ET (Tundra)
+    31:(102, 102, 102), # EF (Ice cap)
+}
+
 TILE_ID_MAP         = {
     255: (0, 0, 0),       # CLEAR TILE [ NONE ]
     0: (0, 0, 127),       # WATER
@@ -283,6 +327,44 @@ COUNTRY_PALETTE =  {
     "Spikey_boy"        : 17
 }
 
+CLIMATE_PALETTE = {
+    # --- A ---
+    'Af': 1,
+    'Am': 2,
+    'Aw': 3,
+    'As': 4,
+    # --- B ---
+    'BWh': 5,
+    'BWk': 6,
+    'BSh': 7,
+    'BSk': 8,
+    # --- C ---
+    'Cwa': 9,
+    'Cwb': 10,
+    'Cwc': 11,
+    'Cfa': 12,
+    'Cfb': 13,
+    'Cfc': 14,
+    'Csa': 15,
+    'Csb': 16,
+    'Csc': 17,
+    # --- D ---
+    'Dwa': 18,
+    'Dwb': 19,
+    'Dwc': 20,
+    'Dwd': 21,
+    'Dfa': 22,
+    'Dfb': 23,
+    'Dfc': 24,
+    'Dfd': 25,
+    'Dsa': 26,
+    'Dsb': 27,
+    'Dsc': 28,
+    'Dsd': 29,
+    # --- E ---
+    'ET': 30,
+    'EF': 31
+}
 
 if __name__ == "__main__":
     print("""nation-utils, custom python file for holding reused code for several files.""")

@@ -16,37 +16,34 @@ RESIZED_SIZE = 1920, 1080
 if __name__ == "__main__":
     print("?- checking for imagefiles ...")
     try:
-        geographic_icon  = arcade.load_texture("icons/geo_map_icon.png")
-        political_icon   = arcade.load_texture("icons/pol_map_icon.png")
-        information_icon = arcade.load_texture("icons/inf_map_icon.png")
-        geographic_palette_icon = arcade.load_texture("icons/geo_palette_icon.png")
-        political_palette_icon  = arcade.load_texture("icons/pol_palette_icon.png")
+        geography_layer_button_icon     = arcade.load_texture("icons/geo_map_icon.png")
+        geography_palette_button_icon   = arcade.load_texture("icons/geo_palette_icon.png")
+
+        political_layer_button_icon     = arcade.load_texture("icons/pol_map_icon.png")
+        political_palette_button_icon   = arcade.load_texture("icons/pol_palette_icon.png")
+
+        information_layer_button_icon   = arcade.load_texture("icons/inf_map_icon.png")
+
+        climate_layer_button_icon       = arcade.load_texture("icons/climate_layer_button_icon.png")
+        climate_palette_button_icon     = arcade.load_texture("icons/climate_palette_button_icon.png")
         print("O- imagefiles found and loaded")
     except:
         print(f"X- {Exception}: imagefiles not found")
-
-    precomputed_terrain_colors = np.array([
-        na.TILE_ID_MAP.get(i, (255, 255, 255)) for i in range(256)
-    ])
-    precomputed_political_colors = np.array([
-        na.POLITICAL_ID_MAP.get(i, (53, 53, 53)) for i in range(256)
-    ])
 
 # ---
 
 class Game(arcade.Window):
     def __init__(self, width, height, title):
         super().__init__(width, height, title, resizable=True)
-        print("?- initializing camera ...")
         self.camera                 = arcade.camera.Camera2D(); 
         self.camera.position        = (0,0)
-        print("O- set up camera")
-        print("?- initializing other variables ...")
-        self.resized_size           = 1920, 1080
         self.camera_speed           = 0.0, 0.0
         self.zoomed_speed_mod_adder = 0.0
         self.zoomed_speed_mod       = 1.0
         self.zoom_speed             = 0.0
+        # ---
+        self.resized_size           = 1920, 1080
+
         self.terrain_scene          = None
         self.last_pressed_screen    = None
         self.last_pressed_world     = None
@@ -64,6 +61,7 @@ class Game(arcade.Window):
         self.previous_angle         = 0
 
         self.selected_icon_id       = None
+        self.selected_climate_id    = 9
         self.selected_world_icon    = None
         self.moving_the_icon        = False
         self.rotating_the_icon      = False
@@ -75,7 +73,8 @@ class Game(arcade.Window):
         self.grid_assistance        = False
 
         self.biome_visibility    = True
-        self.country_visibility  = True
+        self.country_visibility  = False
+        self.climate_visibility  = False
 
         self.has_map_been_loaded    = False
         print("O- variables set up")
@@ -102,22 +101,14 @@ class Game(arcade.Window):
         self.s_upper_terrain_layer  = na.GridLayer((600,300))
         self.s_lower_terrain_layer  = na.GridLayer((12000,6000))
 
+        self.north_climate_layer    = na.GridLayer((600,300))
+        self.south_climate_layer    = na.GridLayer((600,300))
+
         self.icons = {
             'locations': [],
             'lines': []
         }
         print("O- grids set up / icons dict initialized")
-
-        self.upper_terrain_layer_texture = None
-        self.lower_terrain_layer_texture = None
-        self.political_layer_texture     = None
-        
-        self.s_upper_terrain_layer_texture=None
-        self.s_lower_terrain_layer_texture=None
-        self.s_political_layer_texture    =None
-
-        self.north_political_water_overlay_layer_texture = None
-        self.south_political_water_overlay_layer_texture = None
 
         keybinds_anchor = self.ui.add(arcade.gui.UIAnchorLayout())
         self.keybinds_box = keybinds_anchor.add(arcade.gui.UIBoxLayout(space_between=0), anchor_x="center", anchor_y="center")
@@ -193,7 +184,7 @@ class Game(arcade.Window):
         ]
 
         self.brush_buttons = []
-
+        self.climate_buttons = []
         self.buttons = []
         for idx, name in enumerate(icon_names):
             icon_texture = arcade.load_texture(f"{na.ICON_ID_MAP.get(idx)}.png")
@@ -232,8 +223,16 @@ class Game(arcade.Window):
             anchor_x="center",
             anchor_y="bottom"
         )
+        climate_palette_buttons = bottom_anchor.add(
+            arcade.gui.UIBoxLayout(
+                vertical=False
+                ).with_background(color=arcade.types.Color(30,30,30,255)),
+            anchor_x="center",
+            anchor_y="bottom"
+        )
         biome_palette_buttons.visible = False
         country_palette_buttons.visible = False
+        climate_palette_buttons.visible = True
 
         center_anchor = self.ui.add(arcade.gui.UIAnchorLayout())
         self.popupmenu_buttons = center_anchor.add(
@@ -279,10 +278,25 @@ class Game(arcade.Window):
                 self.selected_country_id = idx
                 self.on_notification_toast(f"Selected {name}")
 
+        for i, (climate_name, climate_id) in enumerate(na.CLIMATE_PALETTE.items()):
+            rgb = na.CLIMATE_ID_MAP.get(climate_id,0)
+            rgba= rgb + (255,)
+            button = arcade.gui.UIFlatButton(height=32,width=32,style={
+                "normal": arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0],rgba[1],rgba[2],rgba[3])),
+                "hover" : arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0]+5,rgba[1]+5,rgba[2]+5,rgba[3])),
+                "press" : arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0],rgba[1],rgba[2],rgba[3]-50))
+                })
+            climate_palette_buttons.add(button)
+
+            @button.event
+            def on_click(event: arcade.gui.UIOnClickEvent, idx=climate_id, name=climate_name):
+                self.selected_climate_id = idx
+                self.on_notification_toast(f"Selected {name}")
+
         biome_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
         biome_toggle.add(
             child=arcade.gui.UIImage(
-                texture=geographic_icon,
+                texture=geography_layer_button_icon,
                 width =64,
                 height=64,
             ),
@@ -293,7 +307,7 @@ class Game(arcade.Window):
         political_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
         political_toggle.add(
             child=arcade.gui.UIImage(
-                texture=political_icon,
+                texture=political_layer_button_icon,
                 width =64,
                 height=64,
             ),
@@ -304,7 +318,7 @@ class Game(arcade.Window):
         information_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
         information_toggle.add(
             child=arcade.gui.UIImage(
-                texture=information_icon,
+                texture=information_layer_button_icon,
                 width =64,
                 height=64,
             ),
@@ -315,7 +329,7 @@ class Game(arcade.Window):
         biome_palette_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
         biome_palette_toggle.add(
             child=arcade.gui.UIImage(
-                texture=geographic_palette_icon,
+                texture=geography_palette_button_icon,
                 width =64,
                 height=64,
             ),
@@ -326,7 +340,29 @@ class Game(arcade.Window):
         political_palette_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
         political_palette_toggle.add(
             child=arcade.gui.UIImage(
-                texture=political_palette_icon,
+                texture=political_palette_button_icon,
+                width =64,
+                height=64,
+            ),
+            anchor_x="center",
+            anchor_y="center"
+        )
+
+        climate_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
+        climate_toggle.add(
+            child=arcade.gui.UIImage(
+                texture=climate_layer_button_icon,
+                width =64,
+                height=64,
+            ),
+            anchor_x="center",
+            anchor_y="center"
+        )
+
+        climate_palette_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
+        climate_palette_toggle.add(
+            child=arcade.gui.UIImage(
+                texture=climate_palette_button_icon,
                 width =64,
                 height=64,
             ),
@@ -336,36 +372,28 @@ class Game(arcade.Window):
 
         @biome_toggle.event
         def on_click(event: arcade.gui.UIOnClickEvent):
-            print("Biome toggled")
-            abc = self.terrain_scene.get_sprite_list("1")
-            if abc.visible == True:
-                abc.visible = False
-            else:
-                abc.visible = True
+            self.biome_visibility = not self.biome_visibility
 
         @political_toggle.event
         def on_click(event: arcade.gui.UIOnClickEvent):
-            print("Political toggled")
-            abc = self.political_scene.get_sprite_list("0")
-            if abc.visible == True:
-                abc.visible = False
-                self.political_background = False
-            else:
-                abc.visible = True
-                self.political_background = True
+            self.country_visibility = not self.country_visibility
 
         @information_toggle.event
         def on_click(event: arcade.gui.UIOnClickEvent):
-            bcd = self.info_scene.get_sprite_list("0")
-            if bcd.visible == True:
-                bcd.visible = False
-            else:
-                bcd.visible = True
+            temp_value = self.info_scene.get_sprite_list("0")
+            temp_value.visible = not temp_value.visible
+
+        @climate_toggle.event
+        def on_click(event: arcade.gui.UIOnClickEvent):
+            self.climate_visibility = not self.climate_visibility
 
         @biome_palette_toggle.event
         def on_click(event: arcade.gui.UIOnClickEvent):
             if country_palette_buttons.visible == True:
                 country_palette_buttons.visible = False
+                biome_palette_buttons.visible = True
+            elif climate_palette_buttons.visible == True:
+                climate_palette_buttons.visible = False
                 biome_palette_buttons.visible = True
             else:
                 biome_palette_buttons.visible = not biome_palette_buttons.visible
@@ -375,12 +403,28 @@ class Game(arcade.Window):
             if biome_palette_buttons.visible == True:
                 biome_palette_buttons.visible = False
                 country_palette_buttons.visible = True
+            elif climate_palette_buttons.visible == True:
+                climate_palette_buttons.visible = False
+                country_palette_buttons.visible = True
             else:
                 country_palette_buttons.visible = not country_palette_buttons.visible
 
+        @climate_palette_toggle.event
+        def on_click(event: arcade.gui.UIOnClickEvent):
+            if biome_palette_buttons.visible == True:
+                biome_palette_buttons.visible = False
+                climate_palette_buttons.visible = True
+            elif country_palette_buttons.visible == True:
+                country_palette_buttons.visible = False
+                climate_palette_buttons.visible = True
+            else:
+                climate_palette_buttons.visible = not climate_palette_buttons.visible
+
         layer_buttons.add(information_toggle)
         layer_buttons.add(political_toggle)
+        layer_buttons.add(climate_toggle)
         layer_buttons.add(biome_toggle)
+        layer_buttons.add(climate_palette_toggle)
         layer_buttons.add(biome_palette_toggle)
         layer_buttons.add(political_palette_toggle)
 
@@ -410,41 +454,67 @@ class Game(arcade.Window):
         loaded_data = np.load(filename,allow_pickle=True)
         print(f"I- loading {filename}")
 
-        # ---
-
+        check_count = 0
         try:
             loaded_a_data                   = loaded_data['a']
             self.upper_terrain_layer.grid[:]= np.reshape(loaded_a_data,(600,300))
+            check_count += 1
         except:
-            print("X- no a definition? skipping.")
+            print("X- no a definition? skipping. ! THIS WILL CAUSE NORTH LOW DETAIL TO NOT LOAD")
 
         try:
             loaded_b_data                   = loaded_data['b']
             self.political_layer.grid[:]    = np.reshape(loaded_b_data,(600,300))
+            check_count += 1
         except:
-            print("X- no b definition? skipping.")
+            print("X- no b definition? skipping. ! THIS WILL CAUSE NORTH POLITICAL TO NOT LOAD")
 
         try:
             loaded_c_data                   = loaded_data['c']
             self.lower_terrain_layer.grid[:]= np.reshape(loaded_c_data,(12000,6000))
+            check_count += 1
         except:
-            print("X- no c definition? skipping.")
+            print("X- no c definition? skipping. ! THIS WILL CAUSE NORTH HIGH DETAIL TO NOT LOAD")
 
         # ---
         try:
             loaded_a_s_data                 = loaded_data['a_s']
             self.s_upper_terrain_layer.grid[:]=np.reshape(loaded_a_s_data,(600,300))
+            check_count += 1
         except:
-            print("X- no a_s definition? skipping.")
+            print("X- no a_s definition? skipping. ! THIS WILL CAUSE SOUTH LOW DETAIL TO NOT LOAD")
 
         try:
             loaded_b_s_data                 = loaded_data['b_s']
             self.s_political_layer.grid[:]  = np.reshape(loaded_b_s_data,(600,300))
+            check_count += 1
         except:
-            print("X- no b_s definition? skipping.")
+            print("X- no b_s definition? skipping. ! THIS WILL CAUSE NORTH POLITICAL TO NOT LOAD")
 
-        loaded_c_s_data                 = loaded_data['c_s']
-        self.s_lower_terrain_layer.grid[:]=np.reshape(loaded_c_s_data,(12000,6000))
+        try:
+            loaded_c_s_data                 = loaded_data['c_s']
+            self.s_lower_terrain_layer.grid[:]=np.reshape(loaded_c_s_data,(12000,6000))
+            check_count += 1
+        except:
+            print("X- no c_s definition? skipping. ! THIS WILL CAUSE SOUTH HIGH DETAIL TO NOT LOAD")
+
+        try:
+            loaded_d_data                   = loaded_data['d']
+            self.north_climate_layer.grid[:]=np.reshape(loaded_d_data,(600,300))
+            check_count += 1
+        except:
+            print("X- no d definition? skipping. ! THIS WILL CAUSE NORTH CLIMATE TO NOT LOAD")
+
+        try:
+            loaded_d_s_data                 = loaded_data['d_s']
+            self.south_climate_layer.grid[:]= np.reshape(loaded_d_s_data,(600,300))
+            check_count += 1
+        except:
+            print("X- no d_s definition? skipping. ! THIS WILL CAUSE SOUTH CLIMATE TO NOT LOAD")
+
+        print(f"I- loading map checks: [{check_count}/8]")
+        if check_count == 0:
+            print(f"X- check count 0? loading fatal error")
 
         # ---
 
@@ -466,6 +536,9 @@ class Game(arcade.Window):
             b_s_grid = np.frombuffer(self.south_political_layer_texture.read(), dtype="u1")
             c_s_grid = np.frombuffer(self.south_lower_terrain_layer_texture.read(), dtype="u1")
 
+            d_grid = np.frombuffer(self.north_climate_layer_texture.read(), dtype="u1")
+            d_s_grid = np.frombuffer(self.south_climate_layer_texture.read(), dtype="u1")
+
             print("?- trying np.savez_compressed ...")
             timer = time.time()
             np.savez_compressed(f"map_data/gpu-n_{time.localtime().tm_year}_{time.localtime().tm_mon}_{time.localtime().tm_mday}_{time.localtime().tm_hour}_{time.localtime().tm_min}_{time.localtime().tm_sec}.npz",
@@ -475,6 +548,8 @@ class Game(arcade.Window):
                                 a_s=a_s_grid,
                                 b_s=b_s_grid,
                                 c_s=c_s_grid,
+                                d=d_grid,
+                                d_s=d_s_grid,
                                 cc=np.array(self.icons)
                                 )
             time_taken = time.time()-timer
@@ -543,11 +618,15 @@ class Game(arcade.Window):
         south_upper_terrain_layer_data = self.s_upper_terrain_layer.grid.astype(np.uint8).tobytes()
         south_lower_terrain_layer_data = self.s_lower_terrain_layer.grid.astype(np.uint8).tobytes()
         south_political_layer_data = self.s_political_layer.grid.astype(np.uint8).tobytes()
-        print(f"data tobyte took {time.time()-timer}")
+
+        north_climate_layer_data    = self.north_climate_layer.grid.astype(np.uint8).tobytes()
+        south_climate_layer_data    = self.south_climate_layer.grid.astype(np.uint8).tobytes()
+        print(f"Data byte loader took {round(time.time()-timer,3)} s")
 
         terrain_palette_data = []
         political_palette_data=[]
-
+        climate_palette_data = []
+    
         political_water_overlay_palette = []
 
         for i in range(256):
@@ -570,6 +649,13 @@ class Game(arcade.Window):
             a = 155 if i == 0 else 0
             political_water_overlay_palette.append([r, g, b, a])
 
+        for i in range(256):
+            if i in na.CLIMATE_ID_MAP:
+                r, g, b = na.CLIMATE_ID_MAP[i]
+            else:
+                r, g, b = (255, 255, 255)
+            climate_palette_data.append([r, g, b, 155])
+
         terrain_palette_data = np.array(terrain_palette_data, dtype=np.uint8)
         terrain_palette_bytes = terrain_palette_data.tobytes()
 
@@ -578,6 +664,9 @@ class Game(arcade.Window):
 
         political_water_overlay_palette_data = np.array(political_water_overlay_palette, dtype=np.uint8)
         political_water_overlay_palette_bytes= political_water_overlay_palette_data.tobytes()
+
+        climate_palette_data = np.array(climate_palette_data, dtype=np.uint8)
+        climate_palette_bytes = climate_palette_data.tobytes()
 
         self.north_upper_terrain_layer_texture = cgpu.ColorChunk(
             pos=(0,0), ctx=self.ctx, size=(600, 300), colors=terrain_palette_bytes,         data=north_upper_terrain_layer_data
@@ -607,6 +696,13 @@ class Game(arcade.Window):
             pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=political_water_overlay_palette_bytes,       data=south_upper_terrain_layer_data
         )
 
+        self.north_climate_layer_texture = cgpu.ColorChunk(
+            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=climate_palette_bytes,       data=north_climate_layer_data
+        )
+        self.south_climate_layer_texture = cgpu.ColorChunk(
+            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=climate_palette_bytes,       data=south_climate_layer_data
+        )
+
         try:
             del self.upper_terrain_layer
             del self.lower_terrain_layer
@@ -614,6 +710,8 @@ class Game(arcade.Window):
             del self.s_upper_terrain_layer
             del self.s_lower_terrain_layer
             del self.s_political_layer
+            del self.north_climate_layer
+            del self.south_climate_layer
         except:
             print("X- couldn't free up memory, good luck.")
 
@@ -691,6 +789,11 @@ class Game(arcade.Window):
                 if self.camera.zoom >= 1.5:
                     self.north_lower_terrain_layer_texture.draw(size=(12000,6000))
                     self.south_lower_terrain_layer_texture.draw(size=(12000,6000))
+        
+        if self.has_map_been_loaded:
+            if self.climate_visibility:
+                self.north_climate_layer_texture.draw(size=(12000,6000))
+                self.south_climate_layer_texture.draw(size=(12000,6000))
 
         if self.political_background == True:
             if self.has_map_been_loaded:
@@ -701,6 +804,11 @@ class Game(arcade.Window):
                     self.south_political_water_overlay_layer_texture.draw(size=(12000,6000))
 
         self.ctx.disable(self.ctx.BLEND)
+        # if self.has_map_been_loaded:
+        #     # EXPERIMENTAL
+        #     self.north_upper_terrain_layer_texture._texture.build_mipmaps()
+        #     self.north_lower_terrain_layer_texture._texture.build_mipmaps()
+        #     self.north_political_layer_texture._texture.build_mipmaps()
 
         if self.grid_assistance:
             for x__ in range(600):
@@ -763,18 +871,15 @@ class Game(arcade.Window):
         if symbol   == arcade.key.KEY_2:
             self.country_visibility = not self.country_visibility
         if symbol   == arcade.key.KEY_3:
+            self.climate_visibility = not self.climate_visibility
+        if symbol   == arcade.key.KEY_4:
             self.biome_visibility = not self.biome_visibility
-        if symbol   == arcade.key.KEY_0:
-            self.zoomed_speed_mod_adder = 0.01
-        if symbol   == arcade.key.KEY_9:
-            self.zoomed_speed_mod_adder = -0.01
 
         if symbol   == arcade.key.O:
             self.editing_mode = not self.editing_mode
             self.on_notification_toast(f"editing mode toggled {self.editing_mode}")
         if symbol   == arcade.key.G:
             self.grid_assistance = not self.grid_assistance
-            self.on_notification_toast(f"assistance grid toggled {self.grid_assistance}")
         if symbol   == arcade.key.F:
             self.set_fullscreen(not self.fullscreen)
             self.on_notification_toast(f"fullscreen toggled")
@@ -841,9 +946,6 @@ class Game(arcade.Window):
         if symbol == arcade.key.MINUS or symbol == arcade.key.NUM_SUBTRACT:
             self.zoom_speed = 0.0
 
-        if symbol == arcade.key.KEY_0 or symbol == arcade.key.KEY_9:
-            self.zoomed_speed_mod_adder = 0
-
     def on_mouse_press(self, x, y, button, modifiers):
         if button is arcade.MOUSE_BUTTON_RIGHT:
             if self.selected_icon_id or self.selected_icon_id == 0:
@@ -862,55 +964,45 @@ class Game(arcade.Window):
             tile_y = round(world_y / 20 - 0.5)
 
             if self.editing_mode == True:
-                if self.camera.zoom >= 2.5:
-                    if self.selected_brush:
-                        coordinates = na.get_pixel_coordinates(self.selected_brush)
-                        if not coordinates:
-                            print("No coordinates provided.")
-                            return
-                            
-                        min_x = min(x for x, y in coordinates)
-                        min_y = min(y for x, y in coordinates)
-                        max_x = max(x for x, y in coordinates)
-                        max_y = max(y for x, y in coordinates)
-
-                        center_x = (min_x + max_x) / 2
-                        center_y = (min_y + max_y) / 2
-                        
-                        target_positions = []
-                        for rel_x, rel_y in coordinates:
-                            x_pos = round(world_x-0.5 + (rel_x - center_x))
-                            y_pos = round(world_y-0.5 + (rel_y - center_y))
-                            target_positions.append((x_pos, y_pos))
-                        
-                        for pos in target_positions:
-                            x__, y__ = pos
-                            if not y__ < 0:
-                                self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
-                            else:
-                                y__ = 6000-abs(y__)
-                                self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                if self.country_visibility == True:
+                    if not tile_y < 0:
+                        political_tile_to_edit = tile_x,tile_y
+                        self.north_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
                     else:
-                        list_of_tile_positions = []
+                        political_tile_to_edit = tile_x,600-abs(tile_y)
+                        self.south_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
 
-                        half_size = self.editing_mode_size // 2
-                        radius = half_size
+                elif self.climate_visibility == True:
+                    if not tile_y < 0:
+                        climate_tile_to_edit = tile_x,tile_y
+                        self.north_climate_layer_texture.write_tile(position=climate_tile_to_edit,tile_id=self.selected_climate_id)
+                    else:
+                        political_tile_to_edit = tile_x,600-abs(tile_y)
+                        self.south_climate_layer_texture.write_tile(position=climate_tile_to_edit,tile_id=self.selected_climate_id)
 
-                        for x_offset in range(self.editing_mode_size):
-                            for y_offset in range(self.editing_mode_size):
-                                x_ = world_x + (x_offset - half_size)
-                                y_ = world_y + (y_offset - half_size)
+                elif self.biome_visibility == True:   
+                    if self.camera.zoom >= 1.5:
+                        if self.selected_brush:
+                            coordinates = na.get_pixel_coordinates(self.selected_brush)
+                            if not coordinates:
+                                print("No coordinates provided.")
+                                return
+                                
+                            min_x = min(x for x, y in coordinates)
+                            min_y = min(y for x, y in coordinates)
+                            max_x = max(x for x, y in coordinates)
+                            max_y = max(y for x, y in coordinates)
 
-                                distance = ((x_offset - half_size) + 0.5) ** 2 + ((y_offset - half_size) + 0.5) ** 2
-
-                                if not self.editing_mode_size == 1:
-                                    if distance <= (radius + 0.5) ** 2:
-                                        list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
-                                else:
-                                    list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
-
-                        if list_of_tile_positions:
-                            for pos in list_of_tile_positions:
+                            center_x = (min_x + max_x) / 2
+                            center_y = (min_y + max_y) / 2
+                            
+                            target_positions = []
+                            for rel_x, rel_y in coordinates:
+                                x_pos = round(world_x-0.5 + (rel_x - center_x))
+                                y_pos = round(world_y-0.5 + (rel_y - center_y))
+                                target_positions.append((x_pos, y_pos))
+                            
+                            for pos in target_positions:
                                 x__, y__ = pos
                                 if not y__ < 0:
                                     self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
@@ -918,15 +1010,42 @@ class Game(arcade.Window):
                                     y__ = 6000-abs(y__)
                                     self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
                         else:
-                            print(f"no positions")
-                
-                elif self.camera.zoom < 2.5:
-                    if not tile_y < 0:
-                        political_tile_to_edit = tile_x,tile_y
-                        self.north_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
-                    else:
-                        political_tile_to_edit = tile_x,600-abs(tile_y)
-                        self.south_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
+                            list_of_tile_positions = []
+
+                            half_size = self.editing_mode_size // 2
+                            radius = half_size
+
+                            for x_offset in range(self.editing_mode_size):
+                                for y_offset in range(self.editing_mode_size):
+                                    x_ = world_x + (x_offset - half_size)
+                                    y_ = world_y + (y_offset - half_size)
+
+                                    distance = ((x_offset - half_size) + 0.5) ** 2 + ((y_offset - half_size) + 0.5) ** 2
+
+                                    if not self.editing_mode_size == 1:
+                                        if distance <= (radius + 0.5) ** 2:
+                                            list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
+                                    else:
+                                        list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
+
+                            if list_of_tile_positions:
+                                for pos in list_of_tile_positions:
+                                    x__, y__ = pos
+                                    if not y__ < 0:
+                                        self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                    else:
+                                        y__ = 6000-abs(y__)
+                                        self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                            else:
+                                print(f"no positions")
+                    
+                    elif self.camera.zoom < 1.5:
+                        if not tile_y < 0:
+                            biome_tile_to_edit = tile_x,tile_y
+                            self.north_upper_terrain_layer_texture.write_tile(position=biome_tile_to_edit,tile_id=self.selected_lower_id)
+                        else:
+                            biome_tile_to_edit = tile_x,600-abs(tile_y)
+                            self.south_upper_terrain_layer_texture.write_tile(position=biome_tile_to_edit,tile_id=self.selected_lower_id)
 
             else:
                 if self.selected_icon_id or self.selected_icon_id == 0:
@@ -1172,65 +1291,7 @@ class Game(arcade.Window):
                     self.on_notification_toast("Couldn't rotate [cannot find icon] ...", warn=True)
 
             if self.editing_mode == True:
-                if self.camera.zoom >= 2.5:
-                    if self.selected_brush:
-                        coordinates = na.get_pixel_coordinates(self.selected_brush)
-                        if not coordinates:
-                            print("No coordinates provided.")
-                            return
-                            
-                        min_x = min(x for x, y in coordinates)
-                        min_y = min(y for x, y in coordinates)
-                        max_x = max(x for x, y in coordinates)
-                        max_y = max(y for x, y in coordinates)
-
-                        center_x = (min_x + max_x) / 2
-                        center_y = (min_y + max_y) / 2
-                        
-                        target_positions = []
-                        for rel_x, rel_y in coordinates:
-                            x_pos = round(world_x-0.5 + (rel_x - center_x))
-                            y_pos = round(world_y-0.5 + (rel_y - center_y))
-                            target_positions.append((x_pos, y_pos))
-                        
-                        for pos in target_positions:
-                            x__, y__ = pos
-                            if not y__ < 0:
-                                self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
-                            else:
-                                y__ = 6000-abs(y__)
-                                self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
-                    else:
-                        list_of_tile_positions = []
-
-                        half_size = self.editing_mode_size // 2
-                        radius = half_size
-
-                        for x_offset in range(self.editing_mode_size):
-                            for y_offset in range(self.editing_mode_size):
-                                x_ = world_x + (x_offset - half_size)
-                                y_ = world_y + (y_offset - half_size)
-
-                                distance = ((x_offset - half_size) + 0.5) ** 2 + ((y_offset - half_size) + 0.5) ** 2
-
-                                if not self.editing_mode_size == 1:
-                                    if distance <= (radius + 0.5) ** 2:
-                                        list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
-                                else:
-                                    list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
-
-                        if list_of_tile_positions:
-                            for pos in list_of_tile_positions:
-                                x__, y__ = pos
-                                if not y__ < 0:
-                                    self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
-                                else:
-                                    y__ = 6000-abs(y__)
-                                    self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
-                        else:
-                            print(f"no positions")
-
-                elif self.camera.zoom < 2.5:
+                if self.country_visibility == True:
                     if not tile_y < 0:
                         political_tile_to_edit = tile_x,tile_y
                         self.north_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
@@ -1238,7 +1299,83 @@ class Game(arcade.Window):
                         political_tile_to_edit = tile_x,600-abs(tile_y)
                         self.south_political_layer_texture.write_tile(position=political_tile_to_edit,tile_id=self.selected_country_id)
 
+                elif self.climate_visibility == True:
+                    if not tile_y < 0:
+                        climate_tile_to_edit = tile_x,tile_y
+                        self.north_climate_layer_texture.write_tile(position=climate_tile_to_edit,tile_id=self.selected_climate_id)
+                    else:
+                        political_tile_to_edit = tile_x,600-abs(tile_y)
+                        self.south_climate_layer_texture.write_tile(position=climate_tile_to_edit,tile_id=self.selected_climate_id)
+
+                elif self.biome_visibility == True:
+                    if self.camera.zoom >= 1.5:
+                        if self.selected_brush:
+                            coordinates = na.get_pixel_coordinates(self.selected_brush)
+                            if not coordinates:
+                                print("No coordinates provided.")
+                                return
+                                
+                            min_x = min(x for x, y in coordinates)
+                            min_y = min(y for x, y in coordinates)
+                            max_x = max(x for x, y in coordinates)
+                            max_y = max(y for x, y in coordinates)
+
+                            center_x = (min_x + max_x) / 2
+                            center_y = (min_y + max_y) / 2
+                            
+                            target_positions = []
+                            for rel_x, rel_y in coordinates:
+                                x_pos = round(world_x-0.5 + (rel_x - center_x))
+                                y_pos = round(world_y-0.5 + (rel_y - center_y))
+                                target_positions.append((x_pos, y_pos))
+                            
+                            for pos in target_positions:
+                                x__, y__ = pos
+                                if not y__ < 0:
+                                    self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                else:
+                                    y__ = 6000-abs(y__)
+                                    self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                        else:
+                            list_of_tile_positions = []
+
+                            half_size = self.editing_mode_size // 2
+                            radius = half_size
+
+                            for x_offset in range(self.editing_mode_size):
+                                for y_offset in range(self.editing_mode_size):
+                                    x_ = world_x + (x_offset - half_size)
+                                    y_ = world_y + (y_offset - half_size)
+
+                                    distance = ((x_offset - half_size) + 0.5) ** 2 + ((y_offset - half_size) + 0.5) ** 2
+
+                                    if not self.editing_mode_size == 1:
+                                        if distance <= (radius + 0.5) ** 2:
+                                            list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
+                                    else:
+                                        list_of_tile_positions.append((round(x_-0.5), round(y_-0.5)))
+
+                            if list_of_tile_positions:
+                                for pos in list_of_tile_positions:
+                                    x__, y__ = pos
+                                    if not y__ < 0:
+                                        self.north_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                                    else:
+                                        y__ = 6000-abs(y__)
+                                        self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
+                            else:
+                                print(f"no positions")
+
+                    elif self.camera.zoom < 1.5:
+                        if not tile_y < 0:
+                            biome_tile_to_edit = tile_x,tile_y
+                            self.north_upper_terrain_layer_texture.write_tile(position=biome_tile_to_edit,tile_id=self.selected_lower_id)
+                        else:
+                            biome_tile_to_edit = tile_x,600-abs(tile_y)
+                            self.south_upper_terrain_layer_texture.write_tile(position=biome_tile_to_edit,tile_id=self.selected_lower_id)
+
             else:
+                
                 if self.moving_the_icon == True:
                     index = 0
                     for icon in self.icons['locations']:
