@@ -72,26 +72,17 @@ class Game(arcade.Window):
 
         self.grid_assistance        = False
 
-        self.biome_visibility    = True
-        self.country_visibility  = False
-        self.climate_visibility  = False
+        self.biome_visibility       = True
+        self.country_visibility     = False
+        self.climate_visibility     = False
 
         self.has_map_been_loaded    = False
-        print("O- variables set up")
 
-        print("?- setting up view layers ...")
         self.info_scene             = arcade.Scene()
-
         self.info_scene_list        = []
-        print("O- view layers set up")
 
-        print("?- setting up UI manager ...")
         self.ui = arcade.gui.UIManager()
         self.ui.enable()
-        print("O- UI manager successfully initialized")
-
-        # < - DEFINING GRIDS FOR ALL LAYERS #GRIDS
-        print("?- setting up grid layers ...")
         
         self.political_layer        = na.GridLayer((600,300))
         self.upper_terrain_layer    = na.GridLayer((600,300))
@@ -108,7 +99,6 @@ class Game(arcade.Window):
             'locations': [],
             'lines': []
         }
-        print("O- grids set up / icons dict initialized")
 
         keybinds_anchor = self.ui.add(arcade.gui.UIAnchorLayout())
         self.keybinds_box = keybinds_anchor.add(arcade.gui.UIBoxLayout(space_between=0), anchor_x="center", anchor_y="center")
@@ -232,7 +222,7 @@ class Game(arcade.Window):
         )
         biome_palette_buttons.visible = False
         country_palette_buttons.visible = False
-        climate_palette_buttons.visible = True
+        climate_palette_buttons.visible = False
 
         center_anchor = self.ui.add(arcade.gui.UIAnchorLayout())
         self.popupmenu_buttons = center_anchor.add(
@@ -735,6 +725,7 @@ class Game(arcade.Window):
             self.keybinds_box.add(_create_keybind_label("[ R ] - Toggle rotate mode"))
             self.keybinds_box.add(_create_keybind_label("[ P ] - Show brushes menu"))
             self.keybinds_box.add(_create_keybind_label("[ E ] - Toggle icons menu"))
+            self.keybinds_box.add(_create_keybind_label("[ G ] - Toggle grid"))
 
             close_keybinds_button = arcade.gui.UIFlatButton(width=200,height=20,text="Close").with_background(color=arcade.types.Color(25,25,25,255)).with_border(width=1,color=arcade.types.Color(30,30,30,255))
             self.keybinds_box.add(close_keybinds_button)
@@ -777,39 +768,31 @@ class Game(arcade.Window):
     def on_draw(self):
         self.camera.use() 
         self.clear()
-        arcade.draw_lbwh_rectangle_filled(0,0,12000,6000,(0,0,127,255))
-        arcade.draw_lbwh_rectangle_filled(0,0,12000,-6000,(0,0,127,255))
 
-        self.ctx.enable(self.ctx.BLEND)
-
-        if self.has_map_been_loaded:
-            if self.biome_visibility:
-                self.north_upper_terrain_layer_texture.draw(size=(12000,6000))
-                self.south_upper_terrain_layer_texture.draw(size=(12000,6000))
-                if self.camera.zoom >= 1.5:
-                    self.north_lower_terrain_layer_texture.draw(size=(12000,6000))
-                    self.south_lower_terrain_layer_texture.draw(size=(12000,6000))
-        
-        if self.has_map_been_loaded:
-            if self.climate_visibility:
-                self.north_climate_layer_texture.draw(size=(12000,6000))
-                self.south_climate_layer_texture.draw(size=(12000,6000))
-
-        if self.political_background == True:
+        # drawing layers
+        with self.ctx.enabled(self.ctx.BLEND):
             if self.has_map_been_loaded:
-                if self.country_visibility:
-                    self.north_political_layer_texture.draw(size=(12000,6000))
-                    self.south_political_layer_texture.draw(size=(12000,6000))
-                    self.north_political_water_overlay_layer_texture.draw(size=(12000,6000))
-                    self.south_political_water_overlay_layer_texture.draw(size=(12000,6000))
+                if self.biome_visibility:
+                    self.north_upper_terrain_layer_texture.draw(size=(12000,6000))
+                    self.south_upper_terrain_layer_texture.draw(size=(12000,6000))
+                    if self.camera.zoom >= 1.5:
+                        self.north_lower_terrain_layer_texture.draw(size=(12000,6000))
+                        self.south_lower_terrain_layer_texture.draw(size=(12000,6000))
+            
+            if self.has_map_been_loaded:
+                if self.climate_visibility:
+                    self.north_climate_layer_texture.draw(size=(12000,6000))
+                    self.south_climate_layer_texture.draw(size=(12000,6000))
 
-        self.ctx.disable(self.ctx.BLEND)
-        # if self.has_map_been_loaded:
-        #     # EXPERIMENTAL
-        #     self.north_upper_terrain_layer_texture._texture.build_mipmaps()
-        #     self.north_lower_terrain_layer_texture._texture.build_mipmaps()
-        #     self.north_political_layer_texture._texture.build_mipmaps()
+            if self.political_background == True:
+                if self.has_map_been_loaded:
+                    if self.country_visibility:
+                        self.north_political_layer_texture.draw(size=(12000,6000))
+                        self.south_political_layer_texture.draw(size=(12000,6000))
+                        self.north_political_water_overlay_layer_texture.draw(size=(12000,6000))
+                        self.south_political_water_overlay_layer_texture.draw(size=(12000,6000))
 
+        # grid assistance lines to show big tile borders
         if self.grid_assistance:
             for x__ in range(600):
                 if x__*20 > self.camera.position[0]-100 and x__*20 < self.camera.position[0]+100:
@@ -819,6 +802,7 @@ class Game(arcade.Window):
                 if y__*20 > self.camera.position[1]-100 and y__*20 < self.camera.position[1]+100:
                     arcade.draw_line(0,y__*20,12000,y__*20,color=(200,200,200,200),line_width=0.5)
 
+        # equator line
         arcade.draw_line(0,0,12000,0,(80,80,80),2)
 
         for start, end in self.icons['lines']:
