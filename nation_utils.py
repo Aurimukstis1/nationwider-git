@@ -9,15 +9,44 @@ from PIL import Image
 
 tile_texture = arcade.load_texture('local_data/sprite_texture.png')
 
-class Icon(arcade.Sprite):
+class Icon:
     """An icon on the map using a texture."""
-    def __init__(self, path_or_texture = None, scale = 1, center_x = 0, center_y = 0, angle = 0, icon_id = 0, angle_rot = 0, unique_id = 1000, country_id = 0, quality = 1, **kwargs):
-        super().__init__(path_or_texture, scale, center_x, center_y, angle, **kwargs)
-        self.icon_id = icon_id
-        self.unique_id = unique_id
-        self.angle_rot = angle_rot
-        self.country_id = country_id
-        self.quality = quality
+    class Civilian(arcade.Sprite):
+        def __init__(self,
+                    # necessary:
+                    path_or_texture:arcade.texture = None,
+                    scale:float = 1,
+                    center:tuple = (None,None),
+                    angle:float = 0,
+                    # custom:
+                    icon_id:int = 0,
+                    unique_id:int = 0,
+                    **kwargs):
+            super().__init__(path_or_texture, scale, center[0], center[1], angle, **kwargs)
+            self.icon_id = icon_id
+            self.unique_id = unique_id
+
+    class Military(arcade.Sprite):
+        def __init__(self,
+                    # necessary:
+                    path_or_texture:arcade.texture = None,
+                    scale:float = 1,
+                    center:tuple = (None,None),
+                    angle:float = 0,
+                    # custom:
+                    icon_id:int = 0,
+                    unique_id:int = 0,
+                    country_id:int = 0,
+                    angle_rot:float = 0,
+                    quality:int = 1,
+                    **kwargs):
+            super().__init__(path_or_texture, scale, center[0], center[1], angle, **kwargs)
+            self.icon_id = icon_id
+            self.unique_id = unique_id
+            self.country_id = country_id
+            self.angle_rot = angle_rot
+            self.quality = quality
+
 
 class Toast(arcade.gui.UILabel):
     """Info notification."""
@@ -203,39 +232,39 @@ POLITICAL_ID_MAP    = {
     17  :   (243, 145, 51)
 }
 
-ICON_ID_MAP         = {
+CIVILIAN_ICON_ID_MAP = {
     0: "icons/structures/str_village",
     1: "icons/structures/str_town",
     2: "icons/structures/str_city",
     3: "icons/structures/str_metro",
-    4: "icons/structures/str_outpost",
-    5: "icons/structures/str_keep",
-    6: "icons/structures/str_fortress",
-    7: "icons/structures/str_bastion",
-    # -
-    8: "icons/info/info_note",
-    9: "icons/info/info_line",
+}
+
+MILITARY_ICON_ID_MAP         = {
+    0: "icons/structures/str_outpost",
+    1: "icons/structures/str_keep",
+    2: "icons/structures/str_fortress",
+    3: "icons/structures/str_bastion",
     # - 
-    10:"icons/units/vessel_raft",
-    11:"icons/units/vessel_cog",
-    12:"icons/units/vessel_yawl",
-    13:"icons/units/vessel_brig",
-    14:"icons/units/vessel_corvette",
-    15:"icons/units/vessel_frigate",
-    16:"icons/units/vessel_cruiser",
-    17:"icons/units/vessel_battleship",
-    18:"icons/units/vessel_dreadnought",
-    19:"icons/units/vessel_carrier",
+    4:"icons/units/vessel_raft",
+    5:"icons/units/vessel_cog",
+    6:"icons/units/vessel_yawl",
+    7:"icons/units/vessel_brig",
+    8:"icons/units/vessel_corvette",
+    9:"icons/units/vessel_frigate",
+    10:"icons/units/vessel_cruiser",
+    11:"icons/units/vessel_battleship",
+    12:"icons/units/vessel_dreadnought",
+    13:"icons/units/vessel_carrier",
     # -
-    20:"icons/units/unit_artillery",
-    21:"icons/units/unit_cavalry",
-    22:"icons/units/unit_heavy_artillery",
-    23:"icons/units/unit_heavy_cavalry",
-    24:"icons/units/unit_heavy_infantry",
-    25:"icons/units/unit_infantry",
-    26:"icons/units/unit_ranged_cavalry",
-    27:"icons/units/unit_ranged_infantry",
-    28:"icons/units/unit_skirmishers",
+    14:"icons/units/unit_artillery",
+    15:"icons/units/unit_cavalry",
+    16:"icons/units/unit_heavy_artillery",
+    17:"icons/units/unit_heavy_cavalry",
+    18:"icons/units/unit_heavy_infantry",
+    19:"icons/units/unit_infantry",
+    20:"icons/units/unit_ranged_cavalry",
+    21:"icons/units/unit_ranged_infantry",
+    22:"icons/units/unit_skirmishers",
     # -
 }
 
