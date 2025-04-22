@@ -92,6 +92,9 @@ class ColorChunk:
         self._texture.write(
             data=struct.pack("B", tile_id), viewport=(position[0], position[1], 1, 1)
         )
+    
+    def clear(self):
+        self._fbo.clear()
         
     def read(self) -> bytes:
         """Read the entire chunk"""

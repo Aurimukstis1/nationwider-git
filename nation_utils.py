@@ -5,6 +5,7 @@ import arcade
 import arcade.gui
 import numpy
 import os
+import noise
 from PIL import Image
 
 tile_texture = arcade.load_texture('local_data/sprite_texture.png')
@@ -46,7 +47,6 @@ class Icon:
             self.country_id = country_id
             self.angle_rot = angle_rot
             self.quality = quality
-
 
 class Toast(arcade.gui.UILabel):
     """Info notification."""
@@ -118,6 +118,30 @@ def get_pixel_coordinates(image_path:str) -> list:
     
     return coordinates
 
+def generate_blob_coordinates(width, height, scale=0.1, threshold=0.7, octaves=6, persistence=0.5, lacunarity=4.0, seed=None) -> list:
+    if seed is None:
+        seed = numpy.random.randint(0, 10000)
+
+    coordinates = []
+
+    for y in range(height):
+        for x in range(width):
+            nx = x * scale
+            ny = y * scale
+            value = noise.pnoise2(nx,
+                                  ny,
+                                  octaves=octaves,
+                                  persistence=persistence,
+                                  lacunarity=lacunarity,
+                                  repeatx=width,
+                                  repeaty=height,
+                                  base=seed)
+            norm_val = (value + 0.5)
+            if norm_val > threshold:
+                coordinates.append((x, y))
+
+    return coordinates
+
 #---
 CLIMATE_ID_MAP = {
     0: (0, 0, 0), #none
@@ -161,6 +185,35 @@ CLIMATE_ID_MAP = {
     # --- E
     30:(178, 178, 178), # ET (Tundra)
     31:(102, 102, 102), # EF (Ice cap)
+}
+
+TEMPERATURE_ID_MAP = {
+    0: (0, 0, 0), #none
+    # ---
+    1: (0, 35, 135),
+    2: (40, 75, 170),
+    3: (65, 100, 195),
+    4: (90, 125, 225),
+    # ---
+    5: (45, 130, 90),
+    6: (105, 170, 45),
+    7: (120, 210, 35),
+    8: (130, 225, 40),
+    # ---
+    9: (250, 240, 55)
+}
+
+TEMPERATURE_PALETTE = {
+    'erase/none': 0,
+    'average -40C/-40F': 1,
+    'average -30C/-22F': 2,
+    'average -20C/+4F': 3,
+    'average -10C/+14F': 4,
+    'average +0C/+32F': 5,
+    'average +10C/+50F': 6,
+    'average +20C/+68F': 7,
+    'average +30C/+86F': 8,
+    'average +40C/+104F': 9
 }
 
 TILE_ID_MAP         = {
@@ -229,7 +282,19 @@ POLITICAL_ID_MAP    = {
     14  :   (48, 114, 214),
     15  :   (78, 104, 77),
     16  :   (0, 112, 141),
-    17  :   (243, 145, 51)
+    17  :   (213, 145, 51),
+    # ---
+    18  :   (150, 110, 40),
+    19  :   (30, 135, 117),
+    20  :   (145, 145, 145),
+    21  :   (180, 52, 111),
+    22  :   (225, 225, 225),
+    23  :   (61, 96, 29),
+    24  :   (200, 166, 0),
+    25  :   (97, 97, 84),
+    26  :   (17, 49, 14),
+    27  :   (212, 54, 69),
+    28  :   (45, 29, 95)
 }
 
 CIVILIAN_ICON_ID_MAP = {
@@ -239,7 +304,7 @@ CIVILIAN_ICON_ID_MAP = {
     3: "icons/structures/str_metro",
 }
 
-MILITARY_ICON_ID_MAP         = {
+MILITARY_ICON_ID_MAP = {
     0: "icons/structures/str_outpost",
     1: "icons/structures/str_keep",
     2: "icons/structures/str_fortress",
@@ -336,7 +401,7 @@ BIOME_PALETTE = {
 }
 
 COUNTRY_PALETTE =  {
-    "wilderness"        : 0,
+    "unclaimed"         : 0,
     "DragonEgglol"      : 1,
     "Hoovyzepoot"       : 2,
     "Watboi"            : 3,
@@ -353,46 +418,59 @@ COUNTRY_PALETTE =  {
     "Superbantom"       : 14,
     "NuttyMCNuttzz"     : 15,
     "Raven314"          : 16,
-    "Spikey_boy"        : 17
+    "Spikey_boy"        : 17,
+    # ---
+    "AI_PLACEHOLDER_0"  : 18,
+    "AI_PLACEHOLDER_1"  : 19,
+    "AI_PLACEHOLDER_2"  : 20,
+    "AI_PLACEHOLDER_3"  : 21,
+    "AI_PLACEHOLDER_4"  : 22,
+    "AI_PLACEHOLDER_5"  : 23,
+    "AI_PLACEHOLDER_6"  : 24,
+    "AI_PLACEHOLDER_7"  : 25,
+    "AI_PLACEHOLDER_8"  : 26,
+    "AI_PLACEHOLDER_9"  : 27,
+    "AI_PLACEHOLDER_10" : 28
 }
 
 CLIMATE_PALETTE = {
+    'Erase/none': 0,
     # --- A ---
-    'Af': 1,
-    'Am': 2,
-    'Aw': 3,
-    'As': 4,
+    'Af Tropical rainforest climate': 1,
+    'Am Tropical monsoon climate': 2,
+    'Aw Savanna dry winter': 3,
+    'As Savanna dry summer': 4,
     # --- B ---
-    'BWh': 5,
-    'BWk': 6,
-    'BSh': 7,
-    'BSk': 8,
+    'BWh Hot desert climate': 5,
+    'BWk Cold desert climate': 6,
+    'BSh Hot semi-arid climate': 7,
+    'BSk Cold semi-arid climate': 8,
     # --- C ---
-    'Cwa': 9,
-    'Cwb': 10,
-    'Cwc': 11,
-    'Cfa': 12,
-    'Cfb': 13,
-    'Cfc': 14,
-    'Csa': 15,
-    'Csb': 16,
-    'Csc': 17,
+    'Cwa Monsoon-influenced humid subtropical climate': 9,
+    'Cwb Subtropical highland climate': 10,
+    'Cwc Cold subtropical highland climate': 11,
+    'Cfa Humid subtropical climate': 12,
+    'Cfb Temperate oceanic climate': 13,
+    'Cfc Subpolar oceanic climate': 14,
+    'Csa Hot-summer Mediterranean climate': 15,
+    'Csb Warm-summer Mediterranean climate': 16,
+    'Csc Cold-summer Mediterranean climate': 17,
     # --- D ---
-    'Dwa': 18,
-    'Dwb': 19,
-    'Dwc': 20,
-    'Dwd': 21,
-    'Dfa': 22,
-    'Dfb': 23,
-    'Dfc': 24,
-    'Dfd': 25,
-    'Dsa': 26,
-    'Dsb': 27,
-    'Dsc': 28,
-    'Dsd': 29,
+    'Dwa Monsoon-influenced hot-summer humid continental climate': 18,
+    'Dwb Monsoon-influenced warm-summer humid continental climate': 19,
+    'Dwc Monsoon-influenced subarctic climate': 20,
+    'Dwd Monsoon-influenced extremely cold subarctic climate': 21,
+    'Dfa Hot-summer humid continental climate': 22,
+    'Dfb Warm-summer humid continental climate': 23,
+    'Dfc Subarctic climate': 24,
+    'Dfd Extremely cold subarctic climate': 25,
+    'Dsa Mediterranean-influenced hot-summer humid continental climate': 26,
+    'Dsb Mediterranean-influenced warm-summer humid continental climate': 27,
+    'Dsc Mediterranean-influenced subarctic climate': 28,
+    'Dsd Mediterranean-influenced extremely cold subarctic climate': 29,
     # --- E ---
-    'ET': 30,
-    'EF': 31
+    'ET Tundra climate': 30,
+    'EF Ice cap climate': 31
 }
 
 if __name__ == "__main__":
