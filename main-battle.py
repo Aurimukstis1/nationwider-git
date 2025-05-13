@@ -7,6 +7,7 @@ import arcade
 import arcade.gui
 import arcade.gui.widgets
 import numpy as np
+import nation_utils as nutil
 from PIL import Image
 
 import nation_utils as na
@@ -136,7 +137,7 @@ class Game(arcade.Window):
         self.info_scene.add_sprite_list("0")
         self.info_scene_list = []
 
-        self.terrain_layer = na.GridLayer((200,200),20)
+        self.terrain_layer = nutil.GridLayer((200,200))
         self.terrain_layer.grid[:] = np.zeros((200,200),dtype=np.uint8)
         self.icons = {
             'locations': [],
@@ -150,7 +151,7 @@ class Game(arcade.Window):
 
         load_menu_anchor = self.ui.add(arcade.gui.UIAnchorLayout())
         self.load_menu_buttons = load_menu_anchor.add(arcade.gui.UIBoxLayout(space_between=2), anchor_x="center", anchor_y="center")
-        savefiles = na.get_all_files('battlemap_data')
+        savefiles = nutil.get_all_files('battlemap_data')
 
         if savefiles:
             for i, savefile in enumerate(savefiles):
@@ -340,7 +341,7 @@ class Game(arcade.Window):
                 self.on_notification_toast(f"Selected {name}")
 
     def on_notification_toast(self, message:str="", warn:bool=False, error:bool=False, success:bool=False):
-        toast = na.Toast(message, duration=2)
+        toast = nutil.Toast(message, duration=2)
 
         toast.update_font(
             font_color=arcade.uicolor.BLACK,
@@ -413,7 +414,7 @@ class Game(arcade.Window):
             ground_grid = np.empty((200,200),dtype=np.uint8)
 
             def extract_id(cell):
-                return cell.id_ if isinstance(cell, na.Tile) else cell
+                return cell.id_ if isinstance(cell, nutil.Tile) else cell
             
             extract_attribute = np.vectorize(extract_id, otypes=[np.uint8])
             ground_grid = extract_attribute(self.terrain_layer.grid)
@@ -437,7 +438,7 @@ class Game(arcade.Window):
                 world_x = (x * 20)
                 world_y = (y * 20)
 
-                tile = na.Tile(20, 20, world_x, world_y, pixel_rgb+(255,), tile_id_value)
+                tile = nutil.Tile(20, 20, world_x, world_y, pixel_rgb+(255,), tile_id_value)
 
                 self.terrain_scene.add_sprite("0",tile)
             
@@ -446,7 +447,7 @@ class Game(arcade.Window):
         print("?- Loading icons [1/1] ---")
         for icon in self.icons['locations']:
             icon_path = str(ICON_ID_MAP.get(icon['id']))+".png"
-            icon_object = na.Icon(icon_path,1,
+            icon_object = nutil.Icon(icon_path,1,
                            icon['x'],
                            icon['y'],
                            0.0,
@@ -646,7 +647,7 @@ class Game(arcade.Window):
                     else:
                         icon_path = str(ICON_ID_MAP.get(self.selected_icon_id))+".png"
                         generated_unique_id:int = random.randrange(1000,9999)
-                        icon = na.Icon(icon_path,1,world_x,world_y,0.0,self.selected_icon_id,0,generated_unique_id,0,1)
+                        icon = nutil.Icon(icon_path,1,world_x,world_y,0.0,self.selected_icon_id,0,generated_unique_id,0,1)
                         self.info_scene.add_sprite("0",icon)
                         self.info_scene_list.append(icon)
                         self.icons["locations"].append({

@@ -1,11 +1,11 @@
 import json
-import multiprocessing
-import time
 import arcade
 import arcade.gui
 import numpy
 import os
 import noise
+import math
+import random
 from PIL import Image
 
 tile_texture = arcade.load_texture('local_data/sprite_texture.png')
@@ -67,6 +67,11 @@ class Tile(arcade.BasicSprite):
         super().__init__(texture=tile_texture, scale=size, center_x=center_x, center_y=center_y, visible=True, **kwargs)
         self.id_ = id_
 
+class Shape():
+    def __init__(self, input_shape:list = []):
+        self.shape = input_shape
+        self.unique_id:int = random.randrange(10000,99999)
+
 class GridLayer():
     """Suggestion from @typefoo"""
     def __init__(self, grid_size: tuple[int, int]):
@@ -118,7 +123,7 @@ def get_pixel_coordinates(image_path:str) -> list:
     
     return coordinates
 
-def generate_blob_coordinates(width, height, scale=0.1, threshold=0.7, octaves=6, persistence=0.5, lacunarity=4.0, seed=None) -> list:
+def generate_blob_coordinates(width, height, scale=0.1, threshold=0.7, octaves=6, persistence=0.5, lacunarity=10.0, seed=None) -> list:
     if seed is None:
         seed = numpy.random.randint(0, 10000)
 
@@ -141,6 +146,19 @@ def generate_blob_coordinates(width, height, scale=0.1, threshold=0.7, octaves=6
                 coordinates.append((x, y))
 
     return coordinates
+
+def closest_color(target_rgb, color_dict):
+    """
+    Finds the ID of the closest RGB color in color_dict to the target_rgb.
+
+    :param target_rgb: Tuple of (R, G, B) values to match.
+    :param color_dict: Dictionary mapping IDs to (R, G, B) tuples.
+    :return: ID of the closest matching color.
+    """
+    def euclidean_distance(c1, c2):
+        return math.sqrt(sum((a - b) ** 2 for a, b in zip(c1, c2)))
+    
+    return min(color_dict, key=lambda k: euclidean_distance(target_rgb, color_dict[k]))
 
 #---
 CLIMATE_ID_MAP = {

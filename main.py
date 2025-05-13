@@ -3,9 +3,10 @@ import arcade
 import arcade.gui
 import arcade.gui.widgets
 import math
+import arcade.utils
 import numpy as np
 import random
-import nation_utils as na
+import nation_utils as nutil
 import time
 import chunk_gpu as cgpu
 from PIL import Image
@@ -45,6 +46,7 @@ if __name__ == "__main__":
 class Game(arcade.Window):
     def __init__(self, width, height, title):
         super().__init__(width, height, title, resizable=True)
+        self.uptime = 0.0
         self.ui = arcade.gui.UIManager()
         self.ui.enable()
         self.camera                 = arcade.camera.Camera2D(); 
@@ -85,28 +87,28 @@ class Game(arcade.Window):
 
         self.has_map_been_loaded    = False
 
-        self.political_layer        = na.GridLayer((600,300))
-        self.upper_terrain_layer    = na.GridLayer((600,300))
-        self.lower_terrain_layer    = na.GridLayer((12000,6000))
+        self.political_layer        = nutil.GridLayer((600,300))
+        self.upper_terrain_layer    = nutil.GridLayer((600,300))
+        self.lower_terrain_layer    = nutil.GridLayer((12000,6000))
 
-        self.s_political_layer      = na.GridLayer((600,300))
-        self.s_upper_terrain_layer  = na.GridLayer((600,300))
-        self.s_lower_terrain_layer  = na.GridLayer((12000,6000))
+        self.s_political_layer      = nutil.GridLayer((600,300))
+        self.s_upper_terrain_layer  = nutil.GridLayer((600,300))
+        self.s_lower_terrain_layer  = nutil.GridLayer((12000,6000))
 
-        self.north_climate_layer    = na.GridLayer((600,300))
-        self.south_climate_layer    = na.GridLayer((600,300))
+        self.north_climate_layer    = nutil.GridLayer((600,300))
+        self.south_climate_layer    = nutil.GridLayer((600,300))
 
-        self.north_temperature_layer_q1 = na.GridLayer((600,300))
-        self.south_temperature_layer_q1 = na.GridLayer((600,300))
+        self.north_temperature_layer_q1 = nutil.GridLayer((600,300))
+        self.south_temperature_layer_q1 = nutil.GridLayer((600,300))
 
-        self.north_temperature_layer_q2 = na.GridLayer((600,300))
-        self.south_temperature_layer_q2 = na.GridLayer((600,300))
+        self.north_temperature_layer_q2 = nutil.GridLayer((600,300))
+        self.south_temperature_layer_q2 = nutil.GridLayer((600,300))
 
-        self.north_temperature_layer_q3 = na.GridLayer((600,300))
-        self.south_temperature_layer_q3 = na.GridLayer((600,300))
+        self.north_temperature_layer_q3 = nutil.GridLayer((600,300))
+        self.south_temperature_layer_q3 = nutil.GridLayer((600,300))
 
-        self.north_temperature_layer_q4 = na.GridLayer((600,300))
-        self.south_temperature_layer_q4 = na.GridLayer((600,300))
+        self.north_temperature_layer_q4 = nutil.GridLayer((600,300))
+        self.south_temperature_layer_q4 = nutil.GridLayer((600,300))
 
         self.q1_temperature_visibility = False
         self.q2_temperature_visibility = False
@@ -120,26 +122,38 @@ class Game(arcade.Window):
         self.moving_the_icon        = False
         self.rotating_the_icon      = False
         self.selected_line_tool     = False
+        self.selected_remove_line_tool=False
         self.last_pressed_line_point= None
         self.current_shape          = []
         self.final_shape            = []
+
+        self.military_layer_export = True
+        self.civilian_layer_export = True
+        self.misc_lines_1_export = True
+        self.misc_lines_2_export = True
+        self.misc_lines_3_export = True
+        self.misc_lines_4_export = True
+        self.political_export = True
+        self.q4_export = True
+        self.q3_export = True
+        self.q2_export = True
+        self.q1_export = True
+        self.climate_export = True
+        self.biome_export = True
+
         self.military_icons = {
             'locations': []
         }
-        self.military_lines = {
-            'locations': []
-        }
+        self.military_lines = []
         self.civilian_icons = {
             'locations': []
         }
-        self.civilian_lines = {
-            'locations': []
-        }
+        self.civilian_lines = []
 
-        self.misc_lines_1 = {'locations': []}
-        self.misc_lines_2 = {'locations': []}
-        self.misc_lines_3 = {'locations': []}
-        self.misc_lines_4 = {'locations': []}
+        self.misc_lines_1 = []
+        self.misc_lines_2 = []
+        self.misc_lines_3 = []
+        self.misc_lines_4 = []
         self.misc_lines_1_visibility = True
         self.misc_lines_2_visibility = True
         self.misc_lines_3_visibility = True
@@ -185,9 +199,9 @@ class Game(arcade.Window):
         self.is_keybind_box_disabled = False
 
         self.load_menu_buttons = self.center_anchor.add(arcade.gui.UIBoxLayout(space_between=2), anchor_x="center", anchor_y="center")
-        savefiles = na.get_all_files('map_data')
+        savefiles = nutil.get_all_files('map_data')
 
-        attributes_data = na.get_attributes()
+        attributes_data = nutil.get_attributes()
         self.is_keybind_box_disabled = attributes_data['keybinds_disable']
 
         if savefiles:
@@ -248,15 +262,25 @@ class Game(arcade.Window):
         @line_tool_select_button.event
         def on_click(event: arcade.gui.UIOnClickEvent):
             self.selected_line_tool = True
+            self.selected_remove_line_tool = False
             self.on_notification_toast("selected line tool")
         self.default_brushes.add(line_tool_select_button)
 
         line_tool_deselect_button = arcade.gui.UIFlatButton(text="no line", width=64, height=64)
         @line_tool_deselect_button.event
         def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_line_tool = None
+            self.selected_line_tool = False
+            self.selected_remove_line_tool = False
             self.on_notification_toast("deselected line tool")
         self.default_brushes.add(line_tool_deselect_button)
+
+        line_tool_remove_button = arcade.gui.UIFlatButton(text="rm line", width=64, height=64)
+        @line_tool_remove_button.event
+        def on_click(event: arcade.gui.UIOnClickEvent):
+            self.selected_remove_line_tool = True
+            self.selected_line_tool = False
+            self.on_notification_toast("selected line removal tool")
+        self.default_brushes.add(line_tool_remove_button)
 
         civilian_icon_names = [
             "village", "town", "city", "metro"
@@ -271,7 +295,7 @@ class Game(arcade.Window):
         ]
 
         for idx, name in enumerate(civilian_icon_names):
-            icon_texture = arcade.load_texture(f"{na.CIVILIAN_ICON_ID_MAP.get(idx)}.png")
+            icon_texture = arcade.load_texture(f"{nutil.CIVILIAN_ICON_ID_MAP.get(idx)}.png")
             button = arcade.gui.UIFlatButton(text="", width=64, height=64)
             button.add(
                 child=arcade.gui.UIImage(texture=icon_texture, width=48, height=48),
@@ -286,7 +310,7 @@ class Game(arcade.Window):
                 self.on_notification_toast(f"Selected {idx} {name}")
 
         for idx, name in enumerate(military_icon_names):
-            icon_texture = arcade.load_texture(f"{na.MILITARY_ICON_ID_MAP.get(idx)}.png")
+            icon_texture = arcade.load_texture(f"{nutil.MILITARY_ICON_ID_MAP.get(idx)}.png")
             button = arcade.gui.UIFlatButton(text="", width=64, height=64)
             button.add(
                 child=arcade.gui.UIImage(texture=icon_texture, width=48, height=48),
@@ -351,14 +375,46 @@ class Game(arcade.Window):
             anchor_y="center"
         )
         self.escape_buttons.visible = False
-        save_button = arcade.gui.UIFlatButton(width=200,height=64,text="Save map")
+
+        def _create_export_toggle(self, label: str, export_attr: str):
+            layout = arcade.gui.UIBoxLayout(vertical=False, space_between=4)
+            
+            status_label = arcade.gui.UILabel(width=128, height=32, text=f"{getattr(self, export_attr)}")
+            toggle_button = arcade.gui.UIFlatButton(width=128, height=32, text=label)
+
+            @toggle_button.event
+            def on_click(event: arcade.gui.UIOnClickEvent):
+                current_value = getattr(self, export_attr)
+                setattr(self, export_attr, not current_value)
+                status_label.text = f"{getattr(self, export_attr)}"
+
+            layout.add(status_label)
+            layout.add(toggle_button)
+
+            return layout
+
+        self.escape_buttons.add(_create_export_toggle(self, "Military Layer", "military_layer_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Civilian Layer", "civilian_layer_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 1", "misc_lines_1_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 2", "misc_lines_2_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 3", "misc_lines_3_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 4", "misc_lines_4_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Political", "political_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Q4", "q4_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Q3", "q3_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Q2", "q2_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Q1", "q1_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Climate", "climate_export"))
+        self.escape_buttons.add(_create_export_toggle(self, "Biome", "biome_export"))
+
+        save_button = arcade.gui.UIFlatButton(width=256,height=64,text=f"Save to File")
         @save_button.event
         def on_click(event: arcade.gui.UIOnClickEvent):
             self.on_clicked_save()
         self.escape_buttons.add(save_button)
 
-        for i, (biome_name, biome_id) in enumerate(na.BIOME_PALETTE.items()):
-            rgb = na.TILE_ID_MAP.get(biome_id,0)
+        for i, (biome_name, biome_id) in enumerate(nutil.BIOME_PALETTE.items()):
+            rgb = nutil.TILE_ID_MAP.get(biome_id,0)
             rgba= rgb + (255,)
             button = arcade.gui.UIFlatButton(height=32,width=32,style={
                 "normal": arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0],rgba[1],rgba[2],rgba[3])),
@@ -372,8 +428,8 @@ class Game(arcade.Window):
                 self.selected_lower_id = idx
                 self.on_notification_toast(f"Selected {name}")
 
-        for i, (country_owner, country_id) in enumerate(na.COUNTRY_PALETTE.items()):
-            rgb = na.POLITICAL_ID_MAP.get(country_id,0)
+        for i, (country_owner, country_id) in enumerate(nutil.COUNTRY_PALETTE.items()):
+            rgb = nutil.POLITICAL_ID_MAP.get(country_id,0)
             rgba= rgb + (255,)
             button = arcade.gui.UIFlatButton(height=32,width=32,style={
                 "normal": arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0],rgba[1],rgba[2],rgba[3])),
@@ -387,8 +443,8 @@ class Game(arcade.Window):
                 self.selected_country_id = idx
                 self.on_notification_toast(f"Selected {name}")
 
-        for i, (climate_name, climate_id) in enumerate(na.CLIMATE_PALETTE.items()):
-            rgb = na.CLIMATE_ID_MAP.get(climate_id,0)
+        for i, (climate_name, climate_id) in enumerate(nutil.CLIMATE_PALETTE.items()):
+            rgb = nutil.CLIMATE_ID_MAP.get(climate_id,0)
             rgba= rgb + (255,)
             button = arcade.gui.UIFlatButton(height=32,width=32,style={
                 "normal": arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0],rgba[1],rgba[2],rgba[3])),
@@ -402,8 +458,8 @@ class Game(arcade.Window):
                 self.selected_climate_id = idx
                 self.on_notification_toast(f"Selected {name}")
 
-        for i, (temperature_name, temperature_id) in enumerate(na.TEMPERATURE_PALETTE.items()):
-            rgb = na.TEMPERATURE_ID_MAP.get(temperature_id,0)
+        for i, (temperature_name, temperature_id) in enumerate(nutil.TEMPERATURE_PALETTE.items()):
+            rgb = nutil.TEMPERATURE_ID_MAP.get(temperature_id,0)
             rgba= rgb + (255,)
             button = arcade.gui.UIFlatButton(height=32,width=32,style={
                 "normal": arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0],rgba[1],rgba[2],rgba[3])),
@@ -559,7 +615,6 @@ class Game(arcade.Window):
         def on_click(event: arcade.gui.UIOnClickEvent):
             self.selected_layer = 'misc_layer_1'
             self.on_notification_toast("selected misc_layer_1")
-
 
         civilian_information_buttons = layer_toggle_buttons.add(
             arcade.gui.UIBoxLayout(vertical=False, space_between=1)
@@ -776,7 +831,7 @@ class Game(arcade.Window):
         palette_toggle_buttons.add(political_palette_choice)
 
     def on_notification_toast(self, message:str="", warn:bool=False, error:bool=False, success:bool=False):
-        toast = na.Toast(message, duration=2)
+        toast = nutil.Toast(message, duration=2)
 
         toast.update_font(
             font_color=arcade.uicolor.BLACK,
@@ -795,7 +850,7 @@ class Game(arcade.Window):
         toast.with_padding(all=10)
 
         self.toasts.add(toast)
-        print(f"I[toast]- {message}")
+        print(f"I[{time.localtime().tm_year}_{time.localtime().tm_mon}_{time.localtime().tm_mday}_{time.localtime().tm_hour}_{time.localtime().tm_min}_{time.localtime().tm_sec}/toast]- {message}")
 
     def on_clicked_load(self, filename: str):
         loaded_data = np.load(filename,allow_pickle=True)
@@ -834,7 +889,7 @@ class Game(arcade.Window):
             self.s_political_layer.grid[:]  = np.reshape(loaded_b_s_data,(600,300))
             print("O- loaded ...")
         except:
-            print("X- no b_s definition? skipping. ! THIS WILL CAUSE NORTH POLITICAL TO NOT LOAD")
+            print("X- no b_s definition? skipping. ! THIS WILL CAUSE SOUTH POLITICAL TO NOT LOAD")
 
         try:
             loaded_c_s_data                 = loaded_data['c_s']
@@ -862,25 +917,25 @@ class Game(arcade.Window):
             self.north_temperature_layer_q1.grid[:] = np.reshape(loaded_q1n_grid_data,(600,300))
             loaded_q1s_grid_data = loaded_data['q1s']
             self.south_temperature_layer_q1.grid[:] = np.reshape(loaded_q1s_grid_data,(600,300))
-            print("O- loaded ...")
+            print("O- loaded temperature q1 ...")
 
             loaded_q2n_grid_data = loaded_data['q2n']
             self.north_temperature_layer_q2.grid[:] = np.reshape(loaded_q2n_grid_data,(600,300))
             loaded_q2s_grid_data = loaded_data['q2s']
             self.south_temperature_layer_q2.grid[:] = np.reshape(loaded_q2s_grid_data,(600,300))
-            print("O- loaded ...")
+            print("O- loaded temperature q2 ...")
 
             loaded_q3n_grid_data = loaded_data['q3n']
             self.north_temperature_layer_q3.grid[:] = np.reshape(loaded_q3n_grid_data,(600,300))
             loaded_q3s_grid_data = loaded_data['q3s']
             self.south_temperature_layer_q3.grid[:] = np.reshape(loaded_q3s_grid_data,(600,300))
-            print("O- loaded ...")
+            print("O- loaded temperature q3 ...")
 
             loaded_q4n_grid_data = loaded_data['q4n']
             self.north_temperature_layer_q4.grid[:] = np.reshape(loaded_q4n_grid_data,(600,300))
             loaded_q4s_grid_data = loaded_data['q4s']
             self.south_temperature_layer_q4.grid[:] = np.reshape(loaded_q4s_grid_data,(600,300))
-            print("O- loaded ...")
+            print("O- loaded temperature q4 ...")
         except:
             print("X- temperature layers failed to load. ! THIS WILL CAUSE TEMPERATURE MAPS TO NOT LOAD")
 
@@ -891,18 +946,33 @@ class Game(arcade.Window):
             self.military_icons = military_icons_array.item()
             print("O- loaded ...")
 
-            civilian_lines_array = loaded_data['l_civ']
-            self.civilian_lines = civilian_lines_array.item()
-            military_lines_array = loaded_data['l_mil']
-            self.military_lines = military_lines_array.item()
-            misc_lines_1_array = loaded_data['l_1']
-            self.misc_lines_1 = misc_lines_1_array.item()
-            misc_lines_2_array = loaded_data['l_2']
-            self.misc_lines_2 = misc_lines_2_array.item()
-            misc_lines_3_array = loaded_data['l_3']
-            self.misc_lines_3 = misc_lines_3_array.item()
-            misc_lines_4_array = loaded_data['l_4']
-            self.misc_lines_4 = misc_lines_4_array.item()
+            loaded_lines = loaded_data['l_civ']
+            loaded_lines = loaded_lines.item()
+            print(loaded_lines)
+            for shape in loaded_lines['shapes']:
+                self.civilian_lines.append(nutil.Shape(input_shape=shape))
+            loaded_lines = loaded_data['l_mil']
+            loaded_lines = loaded_lines.item()
+            for shape in loaded_lines['shapes']:
+                self.military_lines.append(nutil.Shape(input_shape=shape))
+
+            loaded_lines = loaded_data['l_1']
+            loaded_lines = loaded_lines.item()
+            for shape in loaded_lines['shapes']:
+                self.misc_lines_1.append(nutil.Shape(input_shape=shape))
+            loaded_lines = loaded_data['l_2']
+            loaded_lines = loaded_lines.item()
+            for shape in loaded_lines['shapes']:
+                self.misc_lines_2.append(nutil.Shape(input_shape=shape))
+            loaded_lines = loaded_data['l_3']
+            loaded_lines = loaded_lines.item()
+            for shape in loaded_lines['shapes']:
+                self.misc_lines_3.append(nutil.Shape(input_shape=shape))
+            loaded_lines = loaded_data['l_4']
+            loaded_lines = loaded_lines.item()
+            for shape in loaded_lines['shapes']:
+                self.misc_lines_4.append(nutil.Shape(input_shape=shape))
+
             print("O- loaded ...")
         except:
             print("X- icons and shapes have failed to load.")
@@ -911,51 +981,126 @@ class Game(arcade.Window):
 
     def on_clicked_save(self):
         try:
-            a_grid = np.frombuffer(self.north_upper_terrain_layer_texture.read(), dtype="u1")
-            b_grid = np.frombuffer(self.north_political_layer_texture.read(), dtype="u1")
-            c_grid = np.frombuffer(self.north_lower_terrain_layer_texture.read(), dtype="u1")
+            a_grid = 0
+            b_grid = 0
+            c_grid = 0
 
-            a_s_grid = np.frombuffer(self.south_upper_terrain_layer_texture.read(), dtype="u1")
-            b_s_grid = np.frombuffer(self.south_political_layer_texture.read(), dtype="u1")
-            c_s_grid = np.frombuffer(self.south_lower_terrain_layer_texture.read(), dtype="u1")
+            a_s_grid = 0
+            b_s_grid = 0
+            c_s_grid = 0
 
-            d_grid = np.frombuffer(self.north_climate_layer_texture.read(), dtype="u1")
-            d_s_grid = np.frombuffer(self.south_climate_layer_texture.read(), dtype="u1")
+            d_grid = 0
+            d_s_grid = 0
 
-            q1n_grid = np.frombuffer(self.north_temperature_layer_q1_texture.read(), dtype="u1")
-            q1s_grid = np.frombuffer(self.north_temperature_layer_q1_texture.read(), dtype="u1")
+            q1n_grid = 0
+            q1s_grid = 0
 
-            q2n_grid = np.frombuffer(self.north_temperature_layer_q2_texture.read(), dtype="u1")
-            q2s_grid = np.frombuffer(self.north_temperature_layer_q2_texture.read(), dtype="u1")
+            q2n_grid = 0
+            q2s_grid = 0
 
-            q3n_grid = np.frombuffer(self.north_temperature_layer_q3_texture.read(), dtype="u1")
-            q3s_grid = np.frombuffer(self.north_temperature_layer_q3_texture.read(), dtype="u1")
+            q3n_grid = 0
+            q3s_grid = 0
 
-            q4n_grid = np.frombuffer(self.north_temperature_layer_q4_texture.read(), dtype="u1")
-            q4s_grid = np.frombuffer(self.north_temperature_layer_q4_texture.read(), dtype="u1")
+            q4n_grid = 0
+            q4s_grid = 0
 
-            icon_layer = self.civilian_information_layer.get_sprite_list("0")
-            for icon in icon_layer:
-                icon_data = {
-                    "x": icon.center_x,
-                    "y": icon.center_y,
-                    "id": icon.icon_id,
-                    "unique_id": icon.unique_id
-                }
-                self.civilian_icons['locations'].append(icon_data)
+            if self.biome_export == True:
+                a_grid = np.frombuffer(self.north_upper_terrain_layer_texture.read(), dtype="u1")
+                c_grid = np.frombuffer(self.north_lower_terrain_layer_texture.read(), dtype="u1")
+
+                a_s_grid = np.frombuffer(self.south_upper_terrain_layer_texture.read(), dtype="u1")
+                c_s_grid = np.frombuffer(self.south_lower_terrain_layer_texture.read(), dtype="u1")
+
+            if self.political_export == True:
+                b_grid = np.frombuffer(self.north_political_layer_texture.read(), dtype="u1")
+                b_s_grid = np.frombuffer(self.south_political_layer_texture.read(), dtype="u1")
+
+            if self.climate_export == True:
+                d_grid = np.frombuffer(self.north_climate_layer_texture.read(), dtype="u1")
+                d_s_grid = np.frombuffer(self.south_climate_layer_texture.read(), dtype="u1")
+
+            if self.q1_export:
+                q1n_grid = np.frombuffer(self.north_temperature_layer_q1_texture.read(), dtype="u1")
+                q1s_grid = np.frombuffer(self.north_temperature_layer_q1_texture.read(), dtype="u1")
+
+            if self.q2_export:
+                q2n_grid = np.frombuffer(self.north_temperature_layer_q2_texture.read(), dtype="u1")
+                q2s_grid = np.frombuffer(self.north_temperature_layer_q2_texture.read(), dtype="u1")
+
+            if self.q3_export:
+                q3n_grid = np.frombuffer(self.north_temperature_layer_q3_texture.read(), dtype="u1")
+                q3s_grid = np.frombuffer(self.north_temperature_layer_q3_texture.read(), dtype="u1")
+
+            if self.q4_export:
+                q4n_grid = np.frombuffer(self.north_temperature_layer_q4_texture.read(), dtype="u1")
+                q4s_grid = np.frombuffer(self.north_temperature_layer_q4_texture.read(), dtype="u1")
+
+            if self.civilian_layer_export == True:
+                icon_layer = self.civilian_information_layer.get_sprite_list("0")
+                for icon in icon_layer:
+                    icon_data = {
+                        "x": icon.center_x,
+                        "y": icon.center_y,
+                        "id": icon.icon_id,
+                        "unique_id": icon.unique_id
+                    }
+                    self.civilian_icons['locations'].append(icon_data)
             
-            icon_layer = self.military_information_layer.get_sprite_list("0")
-            for icon in icon_layer:
-                icon_data = {
-                    "x": icon.center_x,
-                    "y": icon.center_y,
-                    "id": icon.icon_id,
-                    "unique_id": icon.unique_id,
-                    "country_id": icon.country_id,
-                    "angle_rot": icon.angle_rot,
-                    "quality": icon.quality
+            if self.military_layer_export == True:
+                icon_layer = self.military_information_layer.get_sprite_list("0")
+                for icon in icon_layer:
+                    icon_data = {
+                        "x": icon.center_x,
+                        "y": icon.center_y,
+                        "id": icon.icon_id,
+                        "unique_id": icon.unique_id,
+                        "country_id": icon.country_id,
+                        "angle_rot": icon.angle_rot,
+                        "quality": icon.quality
+                    }
+                    self.military_icons['locations'].append(icon_data)
+
+            if self.civilian_layer_export == True:
+                civilian_lines_dict = {
+                    'shapes': []
                 }
-                self.military_icons['locations'].append(icon_data)
+                for shape_object in self.civilian_lines:
+                    civilian_lines_dict['shapes'].append(shape_object.shape)
+
+            if self.military_layer_export == True:
+                military_lines_dict = {
+                    'shapes': []
+                }
+                for shape_object in self.military_lines:
+                    military_lines_dict['shapes'].append(shape_object.shape)
+
+            if self.misc_lines_1_export == True:
+                misc_lines_1_dict = {
+                    'shapes': []
+                }
+                for shape_object in self.misc_lines_1:
+                    misc_lines_1_dict['shapes'].append(shape_object)
+
+            if self.misc_lines_2_export == True:
+                misc_lines_2_dict = {
+                    'shapes': []
+                }
+                for shape_object in self.misc_lines_2:
+                    misc_lines_2_dict['shapes'].append(shape_object)
+
+            if self.misc_lines_3_export == True:
+                misc_lines_3_dict = {
+                    'shapes': []
+                }
+                for shape_object in self.misc_lines_3:
+                    misc_lines_3_dict['shapes'].append(shape_object)
+
+            if self.misc_lines_4_export == True:
+                misc_lines_4_dict = {
+                    'shapes': []
+                }
+                for shape_object in self.misc_lines_4:
+                    misc_lines_4_dict['shapes'].append(shape_object)
 
             print("?- trying np.savez_compressed ...")
             timer = time.time()
@@ -970,12 +1115,12 @@ class Game(arcade.Window):
                                 d_s=d_s_grid,
                                 icon_a=np.array(self.civilian_icons),
                                 icon_b=np.array(self.military_icons),
-                                l_civ=np.array(self.civilian_lines),
-                                l_mil=np.array(self.military_lines),
-                                l_1=np.array(self.misc_lines_1),
-                                l_2=np.array(self.misc_lines_2),
-                                l_3=np.array(self.misc_lines_3),
-                                l_4=np.array(self.misc_lines_4),
+                                l_civ=np.array(civilian_lines_dict),
+                                l_mil=np.array(military_lines_dict),
+                                l_1=np.array(misc_lines_1_dict),
+                                l_2=np.array(misc_lines_2_dict),
+                                l_3=np.array(misc_lines_3_dict),
+                                l_4=np.array(misc_lines_4_dict),
                                 q1n=q1n_grid,
                                 q1s=q1s_grid,
                                 q2n=q2n_grid,
@@ -1008,11 +1153,32 @@ class Game(arcade.Window):
         # Return closest element
         return min(elements_within_radius, key=distance)
 
+    def distance(self, p1, p2):
+        return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
+
+    def find_closest_point(self, clicked_point, shape_lists):
+        closest_point = None
+        closest_shape = None
+        closest_index = -1
+        min_dist = float('inf')
+
+        for shape_list in shape_lists:
+            for shape in shape_list:
+                for idx, point in enumerate(shape.shape):
+                    dist = self.distance(clicked_point, point)
+                    if dist < min_dist:
+                        min_dist = dist
+                        closest_point:tuple = point
+                        closest_shape:object = shape
+                        closest_index:int = idx
+
+        return closest_point, closest_shape, closest_index, min_dist
+
     def setup(self):
         print("?- loading icons [1/3] ...")
         for icon in self.civilian_icons['locations']:
-            icon_path = str(na.CIVILIAN_ICON_ID_MAP.get(icon['id'])) + ".png"
-            icon_object = na.Icon.Civilian(
+            icon_path = str(nutil.CIVILIAN_ICON_ID_MAP.get(icon['id'])) + ".png"
+            icon_object = nutil.Icon.Civilian(
                 icon_path,
                 1,
                 (icon['x'], icon['y']),
@@ -1022,10 +1188,11 @@ class Game(arcade.Window):
             )
             self.civilian_information_layer.add_sprite("0", icon_object)
             self.information_icons_list.append(icon_object)
+        self.civilian_icons['locations'].clear()
 
         for icon in self.military_icons['locations']:
-            icon_path = str(na.MILITARY_ICON_ID_MAP.get(icon['id'])) + ".png"
-            icon_object = na.Icon.Military(
+            icon_path = str(nutil.MILITARY_ICON_ID_MAP.get(icon['id'])) + ".png"
+            icon_object = nutil.Icon.Military(
                 icon_path,
                 1,
                 (icon['x'], icon['y']),
@@ -1036,8 +1203,14 @@ class Game(arcade.Window):
                 icon['angle_rot'],
                 icon['quality']
             )
+            country_id = int(icon['country_id'])
+            if not country_id == 0:
+                icon_object.color = nutil.POLITICAL_ID_MAP.get(country_id,(255,255,255,255))
+            else:
+                icon_object.color = (255,255,255,255)
             self.military_information_layer.add_sprite("0", icon_object)
             self.information_icons_list.append(icon_object)
+        self.military_icons['locations'].clear()
 
         timer = time.time()
         north_upper_terrain_layer_data = self.upper_terrain_layer.grid.astype(np.uint8).tobytes()
@@ -1072,16 +1245,16 @@ class Game(arcade.Window):
         political_water_overlay_palette = []
 
         for i in range(256):
-            if i in na.TILE_ID_MAP:
-                r, g, b = na.TILE_ID_MAP[i]
+            if i in nutil.TILE_ID_MAP:
+                r, g, b = nutil.TILE_ID_MAP[i]
             else:
                 r, g, b = (255, 255, 255)
             a = 0 if i == 255 else 255
             terrain_palette_data.append([r, g, b, a])
 
         for i in range(256):
-            if i in na.POLITICAL_ID_MAP:
-                r, g, b = na.POLITICAL_ID_MAP[i]
+            if i in nutil.POLITICAL_ID_MAP:
+                r, g, b = nutil.POLITICAL_ID_MAP[i]
             else:
                 r, g, b = (255, 255, 255)
             political_palette_data.append([r, g, b, 255])
@@ -1092,15 +1265,15 @@ class Game(arcade.Window):
             political_water_overlay_palette.append([r, g, b, a])
 
         for i in range(256):
-            if i in na.CLIMATE_ID_MAP:
-                r, g, b = na.CLIMATE_ID_MAP[i]
+            if i in nutil.CLIMATE_ID_MAP:
+                r, g, b = nutil.CLIMATE_ID_MAP[i]
             else:
                 r, g, b = (255, 255, 255)
             climate_palette_data.append([r, g, b, 155])
 
         for i in range(256):
-            if i in na.TEMPERATURE_ID_MAP:
-                r, g, b = na.TEMPERATURE_ID_MAP[i]
+            if i in nutil.TEMPERATURE_ID_MAP:
+                r, g, b = nutil.TEMPERATURE_ID_MAP[i]
             else:
                 r, g, b = (255, 255, 255)
             temperature_palette_data.append([r, g, b, 155])
@@ -1238,7 +1411,7 @@ class Game(arcade.Window):
 
             @toggle_keybinds_attribute.event
             def on_click(event: arcade.gui.UIOnClickEvent):
-                na.set_attributes('keybinds_disable',True)
+                nutil.set_attributes('keybinds_disable',True)
                 self.keybinds_box.clear()
                 self.keybinds_box.visible = False
 
@@ -1252,6 +1425,7 @@ class Game(arcade.Window):
         return super().on_resize(width, height)
 
     def on_update(self, dt):
+        self.uptime += dt
         self.camera.position += (self.camera_speed[0]*self.zoomed_speed_mod, self.camera_speed[1]*self.zoomed_speed_mod)
 
         self.camera.zoom += self.zoom_speed*self.camera.zoom
@@ -1261,7 +1435,7 @@ class Game(arcade.Window):
 
         for icon in self.information_icons_list:
             icon.scale = max(1.0-(self.camera.zoom/3),0.05)
-            # icon.color = na.QUALITY_COLOR_MAP.get(icon.quality, (255,0,0,255))
+            # icon.color = nutil.QUALITY_COLOR_MAP.get(icon.quality, (255,0,0,255))
 
     def on_draw(self):
         self.camera.use() 
@@ -1273,7 +1447,7 @@ class Game(arcade.Window):
                 if self.biome_visibility:
                     self.north_upper_terrain_layer_texture.draw(size=(12000,6000))
                     self.south_upper_terrain_layer_texture.draw(size=(12000,6000))
-                    if self.camera.zoom >= 1.5:
+                    if self.camera.zoom >= 0.5:
                         self.north_lower_terrain_layer_texture.draw(size=(12000,6000))
                         self.south_lower_terrain_layer_texture.draw(size=(12000,6000))
             
@@ -1326,35 +1500,35 @@ class Game(arcade.Window):
         self.military_information_layer.draw(pixelated=True)
 
         if self.misc_lines_1_visibility:
-            for shape in self.misc_lines_1['locations']:
-                if shape:
-                    arcade.draw_line_strip(shape,(255,255,255,255),1.5)
+            for shape_object in self.misc_lines_1:
+                if shape_object.shape:
+                    arcade.draw_line_strip(shape_object.shape,(255,255,255,255),1.25)
         if self.misc_lines_2_visibility:
-            for shape in self.misc_lines_2['locations']:
-                if shape:
-                    arcade.draw_line_strip(shape,(255,255,255,255),1.5)
+            for shape_object in self.misc_lines_2:
+                if shape_object.shape:
+                    arcade.draw_line_strip(shape_object.shape,(255,255,255,255),1.25)
         if self.misc_lines_3_visibility:
-            for shape in self.misc_lines_3['locations']:
-                if shape:
-                    arcade.draw_line_strip(shape,(255,255,255,255),1.5)
+            for shape_object in self.misc_lines_3:
+                if shape_object.shape:
+                    arcade.draw_line_strip(shape_object.shape,(255,255,255,255),1.25)
         if self.misc_lines_4_visibility:
-            for shape in self.misc_lines_4['locations']:
-                if shape:
-                    arcade.draw_line_strip(shape,(255,255,255,255),1.5)
+            for shape_object in self.misc_lines_4:
+                if shape_object.shape:
+                    arcade.draw_line_strip(shape_object.shape,(255,255,255,255),1.25)
 
         civilian_layer = self.civilian_information_layer.get_sprite_list("0")
         military_layer = self.military_information_layer.get_sprite_list("0")
         if civilian_layer.visible == True:
-            for shape in self.civilian_lines['locations']:
-                if shape:
-                    arcade.draw_line_strip(shape,(255,255,255,255),1.5)
+            for shape_object in self.civilian_lines:
+                if shape_object.shape:
+                    arcade.draw_line_strip(shape_object.shape,(100,100,255,255),1.5)
         if military_layer.visible == True:
-            for shape in self.military_lines['locations']:
-                if shape:
-                    arcade.draw_line_strip(shape,(255,255,255,255),1.5)
+            for shape_object in self.military_lines:
+                if shape_object.shape:
+                    arcade.draw_line_strip(shape_object.shape,(255,100,100,255),1.5)
 
         if self.current_shape:
-            arcade.draw_line_strip(self.current_shape,(255,0,255,155),2)
+            arcade.draw_line_strip(self.current_shape,(255,0,255,100),2)
 
         if self.last_pressed_line_point:
             arcade.draw_line(self.last_pressed_line_point[0],self.last_pressed_line_point[1],self.current_position_world[0],self.current_position_world[1],(255,0,0,155),2)
@@ -1386,32 +1560,6 @@ class Game(arcade.Window):
         elif symbol == arcade.key.D or symbol == arcade.key.RIGHT:
             self.camera_speed = (10.0, self.camera_speed[1])
 
-        # if symbol   == arcade.key.L:
-        #     COLOR_TO_ID = {v: k for k, v in na.POLITICAL_ID_MAP.items()}
-
-        #     image_path = 'cryaboutit.png'
-        #     img = Image.open(image_path).convert('RGB')
-        #     width, height = img.size
-
-        #     for y in range(height):
-        #         for x in range(width):
-        #             current_color = img.getpixel((x, y))
-        #             if current_color in COLOR_TO_ID:
-        #                 color_id = COLOR_TO_ID[current_color]
-        #                 self.north_political_layer_texture.write_tile((x,y),color_id)
-
-        #             if current_color == (67, 134, 28) or current_color == (72, 119, 58) or current_color == (53, 134, 41) or current_color == (20, 42, 8):
-        #                 self.north_political_layer_texture.write_tile((x,y),2)
-
-        #             if current_color == (166, 29, 45) or current_color == (210, 37, 60) or current_color == (60, 3, 8):
-        #                 self.north_political_layer_texture.write_tile((x,y),1)
-
-        #             if current_color == (47, 10, 75):
-        #                 self.north_political_layer_texture.write_tile((x,y),13)
-
-        #             if current_color == (96, 18, 18):
-        #                 self.north_political_layer_texture.write_tile((x,y),5)
-
         if symbol   == arcade.key.Q:
             self.editing_mode = not self.editing_mode
             self.on_notification_toast(f"editing mode toggled {self.editing_mode}")
@@ -1435,7 +1583,7 @@ class Game(arcade.Window):
 
         if symbol   == arcade.key.E:
             if self.icon_box.visible == False:
-                brushes = na.get_all_files('local_data/brushes')
+                brushes = nutil.get_all_files('local_data/brushes')
                 print(f"I- found {brushes.__len__()} brush files")
                 for idx, path in enumerate(brushes):
                     icon_texture = arcade.load_texture(path)
@@ -1468,6 +1616,17 @@ class Game(arcade.Window):
         if symbol == arcade.key.EQUAL or symbol == arcade.key.NUM_ADD:
             self.zoom_speed = 0.01
 
+        # dev tools
+        if symbol == arcade.key.NUM_7:
+            self.civilian_icons['locations'].clear()
+            self.military_icons['locations'].clear()
+            self.information_icons_list.clear()
+            x__ = self.civilian_information_layer.get_sprite_list("0")
+            y__ = self.military_information_layer.get_sprite_list("0")
+            x__.clear()
+            y__.clear()
+            self.on_notification_toast("all icons have been removed", warn=True)
+
     def on_key_release(self, symbol, modifiers):
         if symbol == arcade.key.W or symbol == arcade.key.S or symbol == arcade.key.UP or symbol == arcade.key.DOWN:
             self.camera_speed = (self.camera_speed[0], 0.0)
@@ -1491,19 +1650,19 @@ class Game(arcade.Window):
                 self.current_shape = []
 
                 if self.selected_layer == 'civilian_information_layer':
-                    self.civilian_lines['locations'].append(self.final_shape)
+                    self.civilian_lines.append(nutil.Shape(self.final_shape))
                 elif self.selected_layer == 'military_information_layer':
-                    self.military_lines['locations'].append(self.final_shape)
+                    self.military_lines.append(nutil.Shape(self.final_shape))
                 elif self.selected_layer == 'misc_layer_4':
-                    self.misc_lines_4['locations'].append(self.final_shape)
+                    self.misc_lines_4.append(nutil.Shape(self.final_shape))
                 elif self.selected_layer == 'misc_layer_3':
-                    self.misc_lines_3['locations'].append(self.final_shape)
+                    self.misc_lines_3.append(nutil.Shape(self.final_shape))
                 elif self.selected_layer == 'misc_layer_2':
-                    self.misc_lines_2['locations'].append(self.final_shape)
+                    self.misc_lines_2.append(nutil.Shape(self.final_shape))
                 elif self.selected_layer == 'misc_layer_1':
-                    self.misc_lines_1['locations'].append(self.final_shape)
+                    self.misc_lines_1.append(nutil.Shape(self.final_shape))
                 else:
-                    self.on_notification_toast("no layer received shape?",warn=True)
+                    self.on_notification_toast("no layer received shape?", warn=True)
                 
         if button is arcade.MOUSE_BUTTON_LEFT:
             self.last_pressed_screen = (x, y)
@@ -1517,6 +1676,13 @@ class Game(arcade.Window):
             tile_x = round(world_x / 20 - 0.5)
             tile_y = round(world_y / 20 - 0.5)
 
+            try:
+                all_shape_lists = [self.misc_lines_1,self.misc_lines_2,self.misc_lines_3,self.misc_lines_4,self.civilian_lines,self.military_lines]
+                closest_point, closest_shape, index, dist = self.find_closest_point((self.last_pressed_world[0],self.last_pressed_world[1]), all_shape_lists)
+            except:
+                pass
+                # if it didn't find anything, just fuhgeddaboudit
+
             if self.editing_mode == True:
                 pass
             else:
@@ -1524,19 +1690,29 @@ class Game(arcade.Window):
                     self.last_pressed_line_point = (world_x,world_y)
                     clicked_point = (world_x,world_y)
                     self.current_shape.append(clicked_point)
+                elif self.selected_remove_line_tool:
+                    if closest_shape:
+                        print(f"{closest_shape}\nclosest_point {closest_point} at index {index}, with a distance of={dist}")
+                        if len(closest_shape.shape) <= 2:
+                            closest_shape.shape.clear()
+                            del closest_shape
+                            print(f"I- removed full shape since there were less than 2 points")
+                        else:
+                            closest_shape.shape.pop(index)
+                            print(f"O- popped point in shape")
                 else:
                     if self.selected_icon_id or self.selected_icon_id == 0:
                         if self.selected_icon_type == 'civilian':
-                            icon_path = str(na.CIVILIAN_ICON_ID_MAP.get(self.selected_icon_id))+".png"
+                            icon_path = str(nutil.CIVILIAN_ICON_ID_MAP.get(self.selected_icon_id))+".png"
                             generated_unique_id:int = random.randrange(1000,9999)
-                            icon = na.Icon.Civilian(icon_path,1,(world_x,world_y),0.0,self.selected_icon_id,generated_unique_id)
+                            icon = nutil.Icon.Civilian(icon_path,1,(world_x,world_y),0.0,self.selected_icon_id,generated_unique_id)
                             self.civilian_information_layer.add_sprite("0",icon)
                             self.information_icons_list.append(icon)
 
                         if self.selected_icon_type == 'military':
-                            icon_path = str(na.MILITARY_ICON_ID_MAP.get(self.selected_icon_id))+".png"
+                            icon_path = str(nutil.MILITARY_ICON_ID_MAP.get(self.selected_icon_id))+".png"
                             generated_unique_id:int = random.randrange(1000,9999)
-                            icon = na.Icon.Military(icon_path,1,(world_x,world_y),0.0,self.selected_icon_id,generated_unique_id,0,0.0)
+                            icon = nutil.Icon.Military(icon_path,1,(world_x,world_y),0.0,self.selected_icon_id,generated_unique_id,0,0.0)
                             self.military_information_layer.add_sprite("0",icon)
                             self.information_icons_list.append(icon)
 
@@ -1550,6 +1726,8 @@ class Game(arcade.Window):
                         rotate_reset_button_icon    = arcade.load_texture("icons/rotate_reset_icon.png")
                         up_button_icon              = arcade.load_texture("icons/up_icon.png")
                         down_button_icon            = arcade.load_texture("icons/down_icon.png")
+                        change_nation_icon          = arcade.load_texture("icons/pol_palette_icon.png")
+                        remove_nation_icon          = arcade.load_texture("icons/pol_remove_icon.png")
                         move_button = arcade.gui.UIFlatButton(text="", width=64, height=64)
                         move_button.add(
                             child=arcade.gui.UIImage(
@@ -1616,6 +1794,28 @@ class Game(arcade.Window):
                             anchor_y="center"
                         )
 
+                        nation_button = arcade.gui.UIFlatButton(text="", width=64, height=64)
+                        nation_button.add(
+                            child=arcade.gui.UIImage(
+                                texture=change_nation_icon,
+                                width =64,
+                                height=64,
+                            ),
+                            anchor_x="center",
+                            anchor_y="center"
+                        )
+
+                        reset_nation_button = arcade.gui.UIFlatButton(text="", width=64, height=64)
+                        reset_nation_button.add(
+                            child=arcade.gui.UIImage(
+                                texture=remove_nation_icon,
+                                width =64,
+                                height=64,
+                            ),
+                            anchor_x="center",
+                            anchor_y="center"
+                        )
+
                         @downgrade_button.event
                         def on_click(event: arcade.gui.UIOnClickEvent):
                             if nearby_icon.quality > 1:
@@ -1647,22 +1847,36 @@ class Game(arcade.Window):
                         @remove_button.event
                         def on_click(event: arcade.gui.UIOnClickEvent):
                             self.information_icons_list.remove(self.selected_world_icon)
-                            if isinstance(self.selected_world_icon,na.Icon.Civilian):
+                            if isinstance(self.selected_world_icon,nutil.Icon.Civilian):
                                 icon_layer = self.civilian_information_layer.get_sprite_list("0")
-                            if isinstance(self.selected_world_icon,na.Icon.Military):
+                            if isinstance(self.selected_world_icon,nutil.Icon.Military):
                                 icon_layer = self.military_information_layer.get_sprite_list("0")
                             icon_layer.remove(self.selected_world_icon)
                             self.selected_icon_edit_box.clear()
                             self.selected_world_icon = None
                             self.on_notification_toast("Successfully removed icon.", success=True)
 
+                        @nation_button.event
+                        def on_click(event: arcade.gui.UIOnClickEvent):
+                            nearby_icon.color = nutil.POLITICAL_ID_MAP.get(self.selected_country_id,(255,255,255,255))
+                            nearby_icon.country_id = self.selected_country_id
+                            self.on_notification_toast(f"Successfully changed icon to {self.selected_country_id}")
+
+                        @reset_nation_button.event
+                        def on_click(event: arcade.gui.UIOnClickEvent):
+                            nearby_icon.color = (255,255,255,255)
+                            nearby_icon.country_id = 0
+                            self.on_notification_toast(f"Successfully removed country color")
+
                         self.selected_icon_edit_box.add(move_button)
                         self.selected_icon_edit_box.add(remove_button)
                         self.selected_icon_edit_box.add(rotate_button)
                         self.selected_icon_edit_box.add(rotate_reset_button)
-                        if isinstance(self.selected_world_icon,na.Icon.Military):
+                        if isinstance(self.selected_world_icon,nutil.Icon.Military):
                             self.selected_icon_edit_box.add(upgrade_button)
                             self.selected_icon_edit_box.add(downgrade_button)
+                            self.selected_icon_edit_box.add(nation_button)
+                            self.selected_icon_edit_box.add(reset_nation_button)
                     else:
                         print("Found absolutely nothing in vicinity.") 
                         self.selected_world_icon = None
@@ -1741,7 +1955,7 @@ class Game(arcade.Window):
                     if self.camera.zoom >= 1.5:
                         if self.selected_brush:
                             if self.selected_brush == 1:
-                                coordinates = na.generate_blob_coordinates(self.editing_mode_size,self.editing_mode_size)
+                                coordinates = nutil.generate_blob_coordinates(self.editing_mode_size,self.editing_mode_size)
                                 if not coordinates:
                                     print("No coordinates provided.")
                                     return
@@ -1768,7 +1982,7 @@ class Game(arcade.Window):
                                         y__ = 6000-abs(y__)
                                         self.south_lower_terrain_layer_texture.write_tile(position=(x__,y__),tile_id=self.selected_lower_id)
                             else:
-                                coordinates = na.get_pixel_coordinates(self.selected_brush)
+                                coordinates = nutil.get_pixel_coordinates(self.selected_brush)
                                 if not coordinates:
                                     print("No coordinates provided.")
                                     return

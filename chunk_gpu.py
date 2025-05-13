@@ -71,7 +71,6 @@ class ColorChunk:
             void main() {
                 uint tile_id = texture(chunk_texture, uv).r;
                 fragColor = texelFetch(color_texture, ivec2(tile_id, 0), 0);
-                //fragColor = vec4(tile_id / 255.0, 0.0, 0.0, 1.0);
             }
             """,
         )
@@ -116,32 +115,6 @@ class ColorChunk:
         self._texture.use(unit=1)
         self._quad.render(self._program)
 
-
-class TextureColorMap(arcade.Window):
-    def __init__(self) -> None:
-        super().__init__(title="Texture Color Map")
-        # 256 colors * 4 components (RGBA)
-        palette = [random.randint(0, 255) for _ in range(256 * 4)]
-        # 160x90 tiles
-        tiles = [random.randint(0, 255) for _ in range(20 * 20)]
-        self.color_chunk = ColorChunk(
-            self.ctx, size=(20, 20), colors=bytes(palette), data=bytes(tiles)
-        )
-
-    def on_draw(self):
-        self.clear()
-        self.color_chunk.draw(position=(0, 0), size=(self.width, self.height))
-
-    def on_update(self, delta_time: float):
-        """Randomly change some tiles"""
-        for _ in range(10):
-            x, y = (
-                random.randint(0, self.color_chunk.width - 1),
-                random.randint(0, self.color_chunk.height - 1),
-            )
-            tile_id = random.randint(0, 255)
-            self.color_chunk.write_tile(position=(x, y), tile_id=tile_id)
-
-
-if __name__ == "__main__":
-    TextureColorMap().run()
+    def update_shader(self, time:float = 1.0):
+        """update variables in the chunk's shader"""
+        self._program["time"] = time
