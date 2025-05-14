@@ -7,19 +7,43 @@ import noise
 import math
 import random
 from PIL import Image
+from typing import Any
 
-tile_texture = arcade.load_texture('local_data/sprite_texture.png')
+"""
+Utility functions and classes for map and nation management.
+
+This helper module provides utilities for working with map data, icons, and nation attributes:
+
+- Grid class for managing 2D map data arrays
+- Icon classes for military and civilian map markers 
+- File handling functions for loading/saving attributes and map data
+- Color mapping constants for biomes, countries, climate, etc.
+- Helper functions for coordinate conversion and pixel operation
+"""
 
 class Icon:
-    """An icon on the map using a texture."""
+    """An icon on the map using a texture.
+    
+    This class provides base functionality for map icons, with specialized subclasses
+    for civilian and military icons.
+    """
     class Civilian(arcade.Sprite):
+        """A civilian icon that can be placed on the map.
+        
+        Args:
+            path_or_texture (arcade.texture, optional): Texture to use for the icon. Defaults to None.
+            scale (float, optional): Scale factor for the icon size. Defaults to 1.
+            center (tuple, optional): (x,y) position to place icon. Defaults to (None,None).
+            angle (float, optional): Rotation angle in degrees. Defaults to 0.
+            icon_id (int, optional): ID indicating icon type. Defaults to 0.
+            unique_id (int, optional): Unique identifier for this specific icon. Defaults to 0.
+            **kwargs: Additional keyword arguments passed to arcade.Sprite.
+        """
         def __init__(self,
-                    # necessary:
                     path_or_texture:arcade.texture = None,
                     scale:float = 1,
-                    center:tuple = (None,None),
+                    center:tuple = (None,None), 
                     angle:float = 0,
-                    # custom:
                     icon_id:int = 0,
                     unique_id:int = 0,
                     **kwargs):
@@ -28,13 +52,25 @@ class Icon:
             self.unique_id = unique_id
 
     class Military(arcade.Sprite):
+        """A military icon that can be placed on the map.
+        
+        Args:
+            path_or_texture (arcade.texture, optional): Texture to use for the icon. Defaults to None.
+            scale (float, optional): Scale factor for the icon size. Defaults to 1.
+            center (tuple, optional): (x,y) position to place icon. Defaults to (None,None).
+            angle (float, optional): Rotation angle in degrees. Defaults to 0.
+            icon_id (int, optional): ID indicating icon type. Defaults to 0.
+            unique_id (int, optional): Unique identifier for this specific icon. Defaults to 0.
+            country_id (int, optional): ID of the country this unit belongs to. Defaults to 0.
+            angle_rot (float, optional): Additional rotation angle. Defaults to 0.
+            quality (int, optional): Quality/condition value of the unit. Defaults to 1.
+            **kwargs: Additional keyword arguments passed to arcade.Sprite.
+        """
         def __init__(self,
-                    # necessary:
                     path_or_texture:arcade.texture = None,
                     scale:float = 1,
                     center:tuple = (None,None),
                     angle:float = 0,
-                    # custom:
                     icon_id:int = 0,
                     unique_id:int = 0,
                     country_id:int = 0,
@@ -49,39 +85,87 @@ class Icon:
             self.quality = quality
 
 class Toast(arcade.gui.UILabel):
-    """Info notification."""
+    """A temporary notification label that automatically removes itself after a duration.
+
+    The Toast class displays a text notification that automatically fades away after
+    a specified duration. It inherits from arcade.gui.UILabel.
+
+    Attributes:
+        text (str): The text to display in the notification
+        duration (float): How long in seconds before the notification disappears
+        time (float): Internal timer tracking how long notification has been shown
+
+    Args:
+        text (str): The text to display
+        duration (float, optional): Duration in seconds to show notification. Defaults to 2.0
+        **kwargs: Additional keyword arguments passed to UILabel parent class
+    """
     def __init__(self, text: str, duration: float = 2.0, **kwargs):
         super().__init__(**kwargs)
-        self.text     = text
+        self.text = text
         self.duration = duration
-        self.time     = 0
+        self.time = 0
 
     def on_update(self, dt):
+        """Update the notification timer and remove if duration exceeded.
+        
+        Args:
+            dt (float): Time elapsed since last update in seconds
+        """
         self.time += dt
 
         if self.time > self.duration:
             self.parent.remove(self)
 
-class Tile(arcade.BasicSprite):
-    def __init__(self, size = 1, center_x = 0, center_y = 0, id_ = 0, **kwargs):
-        super().__init__(texture=tile_texture, scale=size, center_x=center_x, center_y=center_y, visible=True, **kwargs)
-        self.id_ = id_
-
 class Shape():
+    """A class representing a shape made up of connected points.
+
+    The Shape class stores a list of points that define a shape, along with a unique identifier.
+    It is used to draw line shapes on the map.
+
+    Attributes:
+        shape (list): List of points (x,y tuples) defining the shape
+        unique_id (int): Random unique identifier between 10000-99999
+
+    Args:
+        input_shape (list, optional): Initial list of points for the shape. Defaults to empty list.
+    """
     def __init__(self, input_shape:list = []):
         self.shape = input_shape
         self.unique_id:int = random.randrange(10000,99999)
 
 class GridLayer():
-    """Suggestion from @typefoo"""
+    """A 2D grid layer for storing map data.
+
+    The GridLayer class represents a 2D grid of uint8 values used to store various map layers
+    like terrain, political boundaries, climate zones etc.
+
+    Attributes:
+        grid_size (tuple[int, int]): Size of the grid as (width, height) tuple
+        grid (numpy.ndarray): 2D numpy array of uint8 values representing the grid data
+
+    Args:
+        grid_size (tuple[int, int]): Size to initialize the grid as (width, height)
+    """
     def __init__(self, grid_size: tuple[int, int]):
         self.grid_size = grid_size
         self.grid = numpy.empty((grid_size[0], grid_size[1]), dtype=numpy.uint8)
     
-def get_all_files(directory):
+def get_all_files(directory: str) -> list[str]:
+    """Recursively get paths of all files in a directory and its subdirectories.
+
+    Walks through the directory tree starting at the given directory path and collects
+    the full paths of all files encountered.
+
+    Args:
+        directory (str): Path to the root directory to search
+
+    Returns:
+        list[str]: List of full file paths for all files found
+    """
     all_files = []
     
-    for root, dirs, files in os.walk(directory):
+    for root, _, files in os.walk(directory):
         for file in files:
             file_path = os.path.join(root, file)
             all_files.append(file_path)
@@ -89,37 +173,90 @@ def get_all_files(directory):
     return all_files
 
 def get_attributes() -> dict:
-    """Getting an attribute from the local file"""
-    attributes_dictionary = None
-    with open('local_data/attributes.json') as attributes_file:
-        attributes_dictionary = json.load(attributes_file)
-    print(f"O- local attributes accessed: {attributes_dictionary}")
-    return attributes_dictionary
+    """Load and return attributes from the local attributes.json file.
+    
+    Reads the attributes dictionary from local_data/attributes.json and returns it.
+    
+    Returns:
+        dict: Dictionary containing the attributes loaded from the JSON file
+    
+    Raises:
+        FileNotFoundError: If attributes.json file does not exist
+        json.JSONDecodeError: If attributes.json contains invalid JSON
+    """
+    try:
+        with open('local_data/attributes.json') as attributes_file:
+            attributes = json.load(attributes_file)
+            print(f"O- local attributes accessed: {attributes}")
+            return attributes
+    except FileNotFoundError:
+        print("X- attributes.json file not found")
+        raise
+    except json.JSONDecodeError:
+        print("X- invalid JSON in attributes.json") 
+        raise
 
-def set_attributes(attribute_name:str, input):
-    """Setting an attribute in the local file"""
-    attributes_dictionary = None
-    with open('local_data/attributes.json', 'r') as attributes_file:
-        attributes_dictionary = json.load(attributes_file)
+def set_attributes(attribute_name: str, value: Any) -> None:
+    """Update an attribute value in the local attributes.json file.
+    
+    Opens the attributes.json file, updates the specified attribute with the new value,
+    and writes the updated dictionary back to the file.
 
-    attributes_dictionary[f'{attribute_name}'] = input
+    Args:
+        attribute_name (str): Name of the attribute to update
+        value (Any): New value to set for the attribute
 
-    with open('local_data/attributes.json', 'w') as attributes_file:
-        json.dump(attributes_dictionary, attributes_file)
-        print(f"O- local attributes accessed: {attributes_dictionary}")
+    Raises:
+        FileNotFoundError: If attributes.json file does not exist
+        json.JSONDecodeError: If attributes.json contains invalid JSON
+    """
+    try:
+        # Read current attributes
+        with open('local_data/attributes.json', 'r') as f:
+            attributes = json.load(f)
+        
+        # Update attribute
+        attributes[attribute_name] = value
+        
+        # Write back updated attributes
+        with open('local_data/attributes.json', 'w') as f:
+            json.dump(attributes, f)
+            
+        print(f"O- local attributes updated: {attributes}")
+            
+    except FileNotFoundError:
+        print("X- attributes.json file not found")
+        raise
+    except json.JSONDecodeError:
+        print("X- invalid JSON in attributes.json")
+        raise
 
-def get_pixel_coordinates(image_path:str) -> list:
+def get_pixel_coordinates(image_path: str) -> list[tuple[int, int]]:
+    """Get coordinates of non-black pixels in an image.
+    
+    Opens an image file and returns a list of (x,y) coordinates for all pixels 
+    that have any RGB value greater than 0.
+    
+    Args:
+        image_path (str): Path to the image file
+        
+    Returns:
+        list[tuple[int, int]]: List of (x,y) coordinate tuples for non-black pixels
+        
+    Raises:
+        FileNotFoundError: If image file does not exist
+    """
     img = Image.open(image_path)
-
     img_array = numpy.array(img)
-
+    height, width = img_array.shape[:2]
+    
     coordinates = []
-    for y in range(img.size[1]):
-        for x in range(img.size[0]):
+    for y in range(height):
+        for x in range(width):
             if img_array[y, x].any() > 0:
-                rel_y = (img.size[0]-1) - y
-                rel_x = x
-                coordinates.append((rel_x, rel_y))
+                # Flip y coordinate since image origin is top-left
+                rel_y = (width - 1) - y
+                coordinates.append((x, rel_y))
     
     return coordinates
 
@@ -147,18 +284,22 @@ def generate_blob_coordinates(width, height, scale=0.1, threshold=0.7, octaves=6
 
     return coordinates
 
-def closest_color(target_rgb, color_dict):
+def closest_color(target_rgb: tuple[int, int, int], color_dict: dict[int, tuple[int, int, int]]) -> int:
     """
-    Finds the ID of the closest RGB color in color_dict to the target_rgb.
+    Finds the ID of the closest RGB color in color_dict to the target_rgb using Euclidean distance.
 
-    :param target_rgb: Tuple of (R, G, B) values to match.
-    :param color_dict: Dictionary mapping IDs to (R, G, B) tuples.
-    :return: ID of the closest matching color.
-    """
-    def euclidean_distance(c1, c2):
-        return math.sqrt(sum((a - b) ** 2 for a, b in zip(c1, c2)))
+    Args:
+        target_rgb: Tuple of (R, G, B) values to match against
+        color_dict: Dictionary mapping IDs to (R, G, B) tuples
     
-    return min(color_dict, key=lambda k: euclidean_distance(target_rgb, color_dict[k]))
+    Returns:
+        The ID from color_dict whose RGB value is closest to target_rgb
+    """
+    def euclidean_distance(color1: tuple[int, int, int], color2: tuple[int, int, int]) -> float:
+        """Calculate Euclidean distance between two RGB colors"""
+        return sum((c1 - c2) ** 2 for c1, c2 in zip(color1, color2)) ** 0.5
+
+    return min(color_dict.items(), key=lambda x: euclidean_distance(target_rgb, x[1]))[0]
 
 #---
 CLIMATE_ID_MAP = {

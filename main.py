@@ -331,7 +331,7 @@ class Game(arcade.Window):
         )
         layer_toggle_buttons = layers_box.add(
             arcade.gui.UIBoxLayout(vertical=True, space_between=1)
-        )
+        ).with_background(color=arcade.types.Color(0,0,0,100))
         palette_toggle_buttons = layers_box.add(
             arcade.gui.UIBoxLayout(vertical=True, space_between=1)
         )
@@ -392,7 +392,6 @@ class Game(arcade.Window):
             layout.add(toggle_button)
 
             return layout
-
         self.escape_buttons.add(_create_export_toggle(self, "Military Layer", "military_layer_export"))
         self.escape_buttons.add(_create_export_toggle(self, "Civilian Layer", "civilian_layer_export"))
         self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 1", "misc_lines_1_export"))
@@ -413,20 +412,30 @@ class Game(arcade.Window):
             self.on_clicked_save()
         self.escape_buttons.add(save_button)
 
-        for i, (biome_name, biome_id) in enumerate(nutil.BIOME_PALETTE.items()):
-            rgb = nutil.TILE_ID_MAP.get(biome_id,0)
-            rgba= rgb + (255,)
-            button = arcade.gui.UIFlatButton(height=32,width=32,style={
-                "normal": arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0],rgba[1],rgba[2],rgba[3])),
-                "hover" : arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0]+5,rgba[1]+5,rgba[2]+5,rgba[3])),
-                "press" : arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0],rgba[1],rgba[2],rgba[3]-50))
-                })
-            biome_palette_buttons.add(button)
-
+        def _create_palette_button(name, id, id_map, button_container, on_click_handler):
+            rgb = id_map.get(id, 0)
+            rgba = rgb + (255,)
+            button = arcade.gui.UIFlatButton(height=32, width=32, style={
+                "normal": arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0], rgba[1], rgba[2], rgba[3])),
+                "hover": arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0]+5, rgba[1]+5, rgba[2]+5, rgba[3])),
+                "press": arcade.gui.UIFlatButton.UIStyle(bg=(rgba[0], rgba[1], rgba[2], rgba[3]-50))
+            })
             @button.event
-            def on_click(event: arcade.gui.UIOnClickEvent, idx=biome_id, name=biome_name):
+            def on_click(event: arcade.gui.UIOnClickEvent, idx=id, n=name):
+                on_click_handler(idx, n)
+            button_container.add(button)
+
+        for biome_name, biome_id in nutil.BIOME_PALETTE.items():
+            def on_biome_click(idx, name):
                 self.selected_lower_id = idx
                 self.on_notification_toast(f"Selected {name}")
+            _create_palette_button(
+                biome_name, 
+                biome_id,
+                nutil.TILE_ID_MAP,
+                biome_palette_buttons,
+                on_biome_click
+            )
 
         for i, (country_owner, country_id) in enumerate(nutil.COUNTRY_PALETTE.items()):
             rgb = nutil.POLITICAL_ID_MAP.get(country_id,0)
@@ -520,180 +529,126 @@ class Game(arcade.Window):
         # ---
 
         # --- toggles
-        misc_layer_4_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        misc_layer_4_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
-        misc_layer_4_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
-        misc_layer_4_toggle.add(
-            child=arcade.gui.UIImage(
-                texture=information_layer_button_icon,
-                width =64,
-                height=64,
-            ),
-            anchor_x="center",
-            anchor_y="center"
-        )
-        misc_layer_4_buttons.add(misc_layer_4_select)
-        misc_layer_4_buttons.add(misc_layer_4_toggle)
-        @misc_layer_4_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.misc_lines_4_visibility = not self.misc_lines_4_visibility
-        @misc_layer_4_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'misc_layer_4'
-            self.on_notification_toast("selected misc_layer_4")
+        self.layer_select_buttons = {}
+        selection_text = ">"
+        deselection_text = ">"
 
-        misc_layer_3_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        misc_layer_3_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
-        misc_layer_3_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
-        misc_layer_3_toggle.add(
-            child=arcade.gui.UIImage(
-                texture=information_layer_button_icon,
-                width =64,
-                height=64,
-            ),
-            anchor_x="center",
-            anchor_y="center"
-        )
-        misc_layer_3_buttons.add(misc_layer_3_select)
-        misc_layer_3_buttons.add(misc_layer_3_toggle)
-        @misc_layer_3_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.misc_lines_3_visibility = not self.misc_lines_3_visibility
-        @misc_layer_3_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'misc_layer_3'
-            self.on_notification_toast("selected misc_layer_3")
+        selected_style = {
+            "normal":   arcade.gui.UIFlatButton.UIStyle(bg=(40,150,80,255)),
+            "hover":    arcade.gui.UIFlatButton.UIStyle(bg=(50,160,90,255)),
+            "press":    arcade.gui.UIFlatButton.UIStyle(bg=(60,170,100,255))
+        }
+        deselected_style = {
+            "normal":   arcade.gui.UIFlatButton.UIStyle(bg=(40,50,80,255)),
+            "hover":    arcade.gui.UIFlatButton.UIStyle(bg=(50,60,90,255)),
+            "press":    arcade.gui.UIFlatButton.UIStyle(bg=(60,70,100,255))
+        }
 
-        misc_layer_2_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        misc_layer_2_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
-        misc_layer_2_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
-        misc_layer_2_toggle.add(
-            child=arcade.gui.UIImage(
-                texture=information_layer_button_icon,
-                width =64,
-                height=64,
-            ),
-            anchor_x="center",
-            anchor_y="center"
-        )
-        misc_layer_2_buttons.add(misc_layer_2_select)
-        misc_layer_2_buttons.add(misc_layer_2_toggle)
-        @misc_layer_2_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.misc_lines_2_visibility = not self.misc_lines_2_visibility
-        @misc_layer_2_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'misc_layer_2'
-            self.on_notification_toast("selected misc_layer_2")
+        def _create_layer_toggle(layer_name, layer_toggle_buttons, texture, visibility_attr):
+            wrapper = layer_toggle_buttons.add(
+                arcade.gui.UIBoxLayout(vertical=True, space_between=1)
+            )
+            buttons = wrapper.add(
+                arcade.gui.UIBoxLayout(vertical=False, space_between=1)
+            )
+            select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
+            self.layer_select_buttons[layer_name] = select
+            toggle = arcade.gui.UIFlatButton(text="", width=64, height=48)
+            toggle.add(
+                child=arcade.gui.UIImage(
+                    texture=texture,
+                    width=64,
+                    height=64,
+                ),
+                anchor_x="center",
+                anchor_y="center"
+            )
+            buttons.add(select)
+            buttons.add(toggle)
 
-        misc_layer_1_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        misc_layer_1_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
-        misc_layer_1_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
-        misc_layer_1_toggle.add(
-            child=arcade.gui.UIImage(
-                texture=information_layer_button_icon,
-                width =64,
-                height=64,
-            ),
-            anchor_x="center",
-            anchor_y="center"
-        )
-        misc_layer_1_buttons.add(misc_layer_1_select)
-        misc_layer_1_buttons.add(misc_layer_1_toggle)
-        @misc_layer_1_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.misc_lines_1_visibility = not self.misc_lines_1_visibility
-        @misc_layer_1_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'misc_layer_1'
-            self.on_notification_toast("selected misc_layer_1")
+            @toggle.event
+            def on_click(event: arcade.gui.UIOnClickEvent):
+                setattr(self, visibility_attr, not getattr(self, visibility_attr))
 
-        civilian_information_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        civilian_information_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
-        civilian_information_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
-        civilian_information_toggle.add(
-            child=arcade.gui.UIImage(
-                texture=information_layer_button_icon,
-                width =64,
-                height=64,
-            ),
-            anchor_x="center",
-            anchor_y="center"
-        )
-        civilian_information_buttons.add(civilian_information_select)
-        civilian_information_buttons.add(civilian_information_toggle)
-        @civilian_information_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            layer__ = self.civilian_information_layer.get_sprite_list("0")
-            layer__.visible = not layer__.visible
-        @civilian_information_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'civilian_information_layer'
-            self.on_notification_toast("selected civilian_information_layer")
+            @select.event
+            def on_click(event: arcade.gui.UIOnClickEvent):
+                self.selected_layer = layer_name
+                for key, btn in self.layer_select_buttons.items():
+                    btn.text = deselection_text
+                    btn.style = deselected_style
+                select.text = selection_text
+                select.style = selected_style
+                self.on_notification_toast(f"selected {layer_name}")
 
-        military_information_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        military_information_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
-        military_information_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
-        military_information_toggle.add(
-            child=arcade.gui.UIImage(
-                texture=information_layer_button_icon,
-                width =64,
-                height=64,
-            ),
-            anchor_x="center",
-            anchor_y="center"
-        )
-        military_information_buttons.add(military_information_select)
-        military_information_buttons.add(military_information_toggle)
-        @military_information_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            layer__ = self.military_information_layer.get_sprite_list("0")
-            layer__.visible = not layer__.visible
-        @military_information_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'military_information_layer'
-            self.on_notification_toast("selected military_information_layer")
+            label = arcade.gui.UILabel(
+                text=layer_name.replace('_', ' ').title(),
+                font_size=10,
+                align="center",
+                height=12
+            )
+            wrapper.add(label)
 
-        political_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        political_layer_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
-        political_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
-        political_toggle.add(
-            child=arcade.gui.UIImage(
-                texture=political_layer_button_icon,
-                width =64,
-                height=64,
-            ),
-            anchor_x="center",
-            anchor_y="center"
-        )
-        political_buttons.add(political_layer_select)
-        political_buttons.add(political_toggle)
-        @political_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.country_visibility = not self.country_visibility
-        @political_layer_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'political_layer'
-            self.on_notification_toast("selected political_layer")
+        def _create_information_layer_toggle(layer_prefix, layer_toggle_buttons):
+            wrapper = layer_toggle_buttons.add(
+                arcade.gui.UIBoxLayout(vertical=True, space_between=1)
+            )
+            buttons = wrapper.add(
+                arcade.gui.UIBoxLayout(vertical=False, space_between=1)
+            )
+            select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
+            self.layer_select_buttons[f'{layer_prefix}_information'] = select
+            toggle = arcade.gui.UIFlatButton(text="", width=64, height=48)
+            toggle.add(
+                child=arcade.gui.UIImage(
+                    texture=information_layer_button_icon,
+                    width=64,
+                    height=64,
+                ),
+                anchor_x="center",
+                anchor_y="center"
+            )
+            buttons.add(select)
+            buttons.add(toggle)
+
+            @toggle.event
+            def on_click(event: arcade.gui.UIOnClickEvent):
+                layer__ = getattr(self, f'{layer_prefix}_information_layer').get_sprite_list("0")
+                layer__.visible = not layer__.visible
+
+            @select.event
+            def on_click(event: arcade.gui.UIOnClickEvent):
+                layer_name = f'{layer_prefix}_information_layer'
+                self.selected_layer = layer_name
+                for key, btn in self.layer_select_buttons.items():
+                    btn.text = deselection_text
+                    btn.style = deselected_style
+                select.text = selection_text
+                select.style = selected_style
+                self.on_notification_toast(f"selected {layer_name}")
+
+            label = arcade.gui.UILabel(
+                text=layer_prefix.replace('_', ' ').title(),
+                font_size=10,
+                align="center",
+                height=12
+            )
+            wrapper.add(label)
+
+        _create_layer_toggle('misc_layer_4', layer_toggle_buttons, information_layer_button_icon, 'misc_lines_4_visibility')
+        _create_layer_toggle('misc_layer_3', layer_toggle_buttons, information_layer_button_icon, 'misc_lines_3_visibility')
+        _create_layer_toggle('misc_layer_2', layer_toggle_buttons, information_layer_button_icon, 'misc_lines_2_visibility')
+        _create_layer_toggle('misc_layer_1', layer_toggle_buttons, information_layer_button_icon, 'misc_lines_1_visibility')
+
+        _create_information_layer_toggle('civilian', layer_toggle_buttons)
+        _create_information_layer_toggle('military', layer_toggle_buttons)
+
+        _create_layer_toggle('political', layer_toggle_buttons, political_layer_button_icon, 'country_visibility')
 
         temperature_q4_buttons = layer_toggle_buttons.add(
             arcade.gui.UIBoxLayout(vertical=False, space_between=1)
         )
-        temperature_q4_layer_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
+        temperature_q4_layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
+        self.layer_select_buttons['temperature_layer_q4'] = temperature_q4_layer_select
         temperature_q4_toggle = arcade.gui.UIFlatButton(text="q4 temp", width=64, height=32)
         temperature_q4_buttons.add(temperature_q4_layer_select)
         temperature_q4_buttons.add(temperature_q4_toggle)
@@ -703,12 +658,18 @@ class Game(arcade.Window):
         @temperature_q4_layer_select.event
         def on_click(event: arcade.gui.UIOnClickEvent):
             self.selected_layer = 'temperature_layer_q4'
+            for key, btn in self.layer_select_buttons.items():
+                btn.text = deselection_text
+                btn.style = deselected_style
+            temperature_q4_layer_select.text = selection_text
+            temperature_q4_layer_select.style = selected_style
             self.on_notification_toast("selected temperature q4 layer")
 
         temperature_q3_buttons = layer_toggle_buttons.add(
             arcade.gui.UIBoxLayout(vertical=False, space_between=1)
         )
-        temperature_q3_layer_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
+        temperature_q3_layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
+        self.layer_select_buttons['temperature_layer_q3'] = temperature_q3_layer_select
         temperature_q3_toggle = arcade.gui.UIFlatButton(text="q3 temp", width=64, height=32)
         temperature_q3_buttons.add(temperature_q3_layer_select)
         temperature_q3_buttons.add(temperature_q3_toggle)
@@ -718,12 +679,18 @@ class Game(arcade.Window):
         @temperature_q3_layer_select.event
         def on_click(event: arcade.gui.UIOnClickEvent):
             self.selected_layer = 'temperature_layer_q3'
+            for key, btn in self.layer_select_buttons.items():
+                btn.text = deselection_text
+                btn.style = deselected_style
+            temperature_q3_layer_select.text = selection_text
+            temperature_q3_layer_select.style = selected_style
             self.on_notification_toast("selected temperature q3 layer")
 
         temperature_q2_buttons = layer_toggle_buttons.add(
             arcade.gui.UIBoxLayout(vertical=False, space_between=1)
         )
-        temperature_q2_layer_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
+        temperature_q2_layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
+        self.layer_select_buttons['temperature_layer_q2'] = temperature_q2_layer_select
         temperature_q2_toggle = arcade.gui.UIFlatButton(text="q2 temp", width=64, height=32)
         temperature_q2_buttons.add(temperature_q2_layer_select)
         temperature_q2_buttons.add(temperature_q2_toggle)
@@ -733,12 +700,18 @@ class Game(arcade.Window):
         @temperature_q2_layer_select.event
         def on_click(event: arcade.gui.UIOnClickEvent):
             self.selected_layer = 'temperature_layer_q2'
+            for key, btn in self.layer_select_buttons.items():
+                btn.text = deselection_text
+                btn.style = deselected_style
+            temperature_q2_layer_select.text = selection_text
+            temperature_q2_layer_select.style = selected_style
             self.on_notification_toast("selected temperature q2 layer")
 
         temperature_q1_buttons = layer_toggle_buttons.add(
             arcade.gui.UIBoxLayout(vertical=False, space_between=1)
         )
-        temperature_q1_layer_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
+        temperature_q1_layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
+        self.layer_select_buttons['temperature_layer_q1'] = temperature_q1_layer_select
         temperature_q1_toggle = arcade.gui.UIFlatButton(text="q1 temp", width=64, height=32)
         temperature_q1_buttons.add(temperature_q1_layer_select)
         temperature_q1_buttons.add(temperature_q1_toggle)
@@ -748,55 +721,15 @@ class Game(arcade.Window):
         @temperature_q1_layer_select.event
         def on_click(event: arcade.gui.UIOnClickEvent):
             self.selected_layer = 'temperature_layer_q1'
+            for key, btn in self.layer_select_buttons.items():
+                btn.text = deselection_text
+                btn.style = deselected_style
+            temperature_q1_layer_select.text = selection_text
+            temperature_q1_layer_select.style = selected_style
             self.on_notification_toast("selected temperature q1 layer")
 
-        climate_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        climate_layer_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
-        climate_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
-        climate_toggle.add(
-            child=arcade.gui.UIImage(
-                texture=climate_layer_button_icon,
-                width =64,
-                height=64,
-            ),
-            anchor_x="center",
-            anchor_y="center"
-        )
-        climate_buttons.add(climate_layer_select)
-        climate_buttons.add(climate_toggle)
-        @climate_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.climate_visibility = not self.climate_visibility
-        @climate_layer_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'climate_layer'
-            self.on_notification_toast("selected climate_layer")
-
-        biome_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        biome_layer_select = arcade.gui.UIFlatButton(text="sel", width=32, height=32)
-        biome_toggle = arcade.gui.UIFlatButton(text="", width=64, height=64)
-        biome_toggle.add(
-            child=arcade.gui.UIImage(
-                texture=geography_layer_button_icon,
-                width =64,
-                height=64,
-            ),
-            anchor_x="center",
-            anchor_y="center"
-        )
-        biome_buttons.add(biome_layer_select)
-        biome_buttons.add(biome_toggle)
-        @biome_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.biome_visibility = not self.biome_visibility
-        @biome_layer_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'biome_layer'
-            self.on_notification_toast("selected biome_layer")
+        _create_layer_toggle('climate', layer_toggle_buttons, climate_layer_button_icon, 'climate_visibility')
+        _create_layer_toggle('biome', layer_toggle_buttons, geography_layer_button_icon, 'biome_visibility')
         # ---
         palette_groups = {
             "biome": biome_palette_buttons,
@@ -1060,47 +993,18 @@ class Game(arcade.Window):
                     }
                     self.military_icons['locations'].append(icon_data)
 
-            if self.civilian_layer_export == True:
-                civilian_lines_dict = {
-                    'shapes': []
-                }
-                for shape_object in self.civilian_lines:
-                    civilian_lines_dict['shapes'].append(shape_object.shape)
+            def _create_shapes_dict(objects, use_shape_attr=True):
+                shapes_dict = {'shapes': []}
+                for obj in objects:
+                    shapes_dict['shapes'].append(obj.shape if use_shape_attr else obj)
+                return shapes_dict
 
-            if self.military_layer_export == True:
-                military_lines_dict = {
-                    'shapes': []
-                }
-                for shape_object in self.military_lines:
-                    military_lines_dict['shapes'].append(shape_object.shape)
-
-            if self.misc_lines_1_export == True:
-                misc_lines_1_dict = {
-                    'shapes': []
-                }
-                for shape_object in self.misc_lines_1:
-                    misc_lines_1_dict['shapes'].append(shape_object)
-
-            if self.misc_lines_2_export == True:
-                misc_lines_2_dict = {
-                    'shapes': []
-                }
-                for shape_object in self.misc_lines_2:
-                    misc_lines_2_dict['shapes'].append(shape_object)
-
-            if self.misc_lines_3_export == True:
-                misc_lines_3_dict = {
-                    'shapes': []
-                }
-                for shape_object in self.misc_lines_3:
-                    misc_lines_3_dict['shapes'].append(shape_object)
-
-            if self.misc_lines_4_export == True:
-                misc_lines_4_dict = {
-                    'shapes': []
-                }
-                for shape_object in self.misc_lines_4:
-                    misc_lines_4_dict['shapes'].append(shape_object)
+            civilian_lines_dict = _create_shapes_dict(self.civilian_lines) if self.civilian_layer_export else None
+            military_lines_dict = _create_shapes_dict(self.military_lines) if self.military_layer_export else None
+            misc_lines_1_dict = _create_shapes_dict(self.misc_lines_1, False) if self.misc_lines_1_export else None
+            misc_lines_2_dict = _create_shapes_dict(self.misc_lines_2, False) if self.misc_lines_2_export else None
+            misc_lines_3_dict = _create_shapes_dict(self.misc_lines_3, False) if self.misc_lines_3_export else None 
+            misc_lines_4_dict = _create_shapes_dict(self.misc_lines_4, False) if self.misc_lines_4_export else None
 
             print("?- trying np.savez_compressed ...")
             timer = time.time()
@@ -1279,103 +1183,73 @@ class Game(arcade.Window):
             temperature_palette_data.append([r, g, b, 155])
 
         terrain_palette_data = np.array(terrain_palette_data, dtype=np.uint8)
-        terrain_palette_bytes = terrain_palette_data.tobytes()
-
         political_palette_data = np.array(political_palette_data, dtype=np.uint8)
-        political_palette_bytes = political_palette_data.tobytes()
-
-        political_water_overlay_palette_data = np.array(political_water_overlay_palette, dtype=np.uint8)
-        political_water_overlay_palette_bytes= political_water_overlay_palette_data.tobytes()
-
         climate_palette_data = np.array(climate_palette_data, dtype=np.uint8)
-        climate_palette_bytes = climate_palette_data.tobytes()
-
         temperature_palette_data = np.array(temperature_palette_data, dtype=np.uint8)
-        temperature_palette_bytes = temperature_palette_data.tobytes()
 
-        self.north_upper_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=terrain_palette_bytes,         data=north_upper_terrain_layer_data
-        )
-        self.north_lower_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(12000, 6000), colors=terrain_palette_bytes,  data=north_lower_terrain_layer_data
-        )
+        def _create_texture(pos, size, colors, data):
+            return cgpu.ColorChunk(pos=pos, ctx=self.ctx, size=size, colors=colors, data=data)
 
-        self.south_upper_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=terrain_palette_bytes,         data=south_upper_terrain_layer_data
-        )
-        self.south_lower_terrain_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(12000, 6000), colors=terrain_palette_bytes,  data=south_lower_terrain_layer_data
-        )
+        palette_bytes = {
+            'terrain': np.array(terrain_palette_data, dtype=np.uint8).tobytes(),
+            'political': np.array(political_palette_data, dtype=np.uint8).tobytes(),
+            'political_water': np.array(political_water_overlay_palette, dtype=np.uint8).tobytes(),
+            'climate': np.array(climate_palette_data, dtype=np.uint8).tobytes(),
+            'temperature': np.array(temperature_palette_data, dtype=np.uint8).tobytes()
+        }
 
-        self.north_political_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=political_palette_bytes,       data=north_political_layer_data
-        )
-        self.south_political_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=political_palette_bytes,   data=south_political_layer_data
-        )
+        texture_configs = [
+            # North
+            ('north_upper_terrain_layer_texture', (0,0), (600,300), palette_bytes['terrain'], north_upper_terrain_layer_data),
+            ('north_lower_terrain_layer_texture', (0,0), (12000,6000), palette_bytes['terrain'], north_lower_terrain_layer_data),
+            ('north_political_layer_texture', (0,0), (600,300), palette_bytes['political'], north_political_layer_data),
+            ('north_political_water_overlay_layer_texture', (0,0), (600,300), palette_bytes['political_water'], north_upper_terrain_layer_data),
+            ('north_climate_layer_texture', (0,0), (600,300), palette_bytes['climate'], north_climate_layer_data),
+            ('north_temperature_layer_q1_texture', (0,0), (600,300), palette_bytes['temperature'], north_temperature_layer_q1_data),
+            ('north_temperature_layer_q2_texture', (0,0), (600,300), palette_bytes['temperature'], north_temperature_layer_q2_data),
+            ('north_temperature_layer_q3_texture', (0,0), (600,300), palette_bytes['temperature'], north_temperature_layer_q3_data),
+            ('north_temperature_layer_q4_texture', (0,0), (600,300), palette_bytes['temperature'], north_temperature_layer_q4_data),
+            # South
+            ('south_upper_terrain_layer_texture', (0,-6000), (600,300), palette_bytes['terrain'], south_upper_terrain_layer_data),
+            ('south_lower_terrain_layer_texture', (0,-6000), (12000,6000), palette_bytes['terrain'], south_lower_terrain_layer_data),
+            ('south_political_layer_texture', (0,-6000), (600,300), palette_bytes['political'], south_political_layer_data),
+            ('south_political_water_overlay_layer_texture', (0,-6000), (600,300), palette_bytes['political_water'], south_upper_terrain_layer_data),
+            ('south_climate_layer_texture', (0,-6000), (600,300), palette_bytes['climate'], south_climate_layer_data),
+            ('south_temperature_layer_q1_texture', (0,-6000), (600,300), palette_bytes['temperature'], south_temperature_layer_q1_data),
+            ('south_temperature_layer_q2_texture', (0,-6000), (600,300), palette_bytes['temperature'], south_temperature_layer_q2_data),
+            ('south_temperature_layer_q3_texture', (0,-6000), (600,300), palette_bytes['temperature'], south_temperature_layer_q3_data),
+            ('south_temperature_layer_q4_texture', (0,-6000), (600,300), palette_bytes['temperature'], south_temperature_layer_q4_data),
+        ]
 
-        self.north_political_water_overlay_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=political_water_overlay_palette_bytes,       data=north_upper_terrain_layer_data
-        )
-        self.south_political_water_overlay_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=political_water_overlay_palette_bytes,       data=south_upper_terrain_layer_data
-        )
+        for attr_name, pos, size, colors, data in texture_configs:
+            setattr(self, attr_name, _create_texture(pos, size, colors, data))
 
-        self.north_climate_layer_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=climate_palette_bytes,       data=north_climate_layer_data
-        )
-        self.south_climate_layer_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=climate_palette_bytes,       data=south_climate_layer_data
-        )
-
-        self.north_temperature_layer_q4_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=temperature_palette_bytes,       data=north_temperature_layer_q4_data
-        )
-        self.south_temperature_layer_q4_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=temperature_palette_bytes,       data=south_temperature_layer_q4_data
-        )
-
-        self.north_temperature_layer_q3_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=temperature_palette_bytes,       data=north_temperature_layer_q3_data
-        )
-        self.south_temperature_layer_q3_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=temperature_palette_bytes,       data=south_temperature_layer_q3_data
-        )
-
-        self.north_temperature_layer_q2_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=temperature_palette_bytes,       data=north_temperature_layer_q2_data
-        )
-        self.south_temperature_layer_q2_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=temperature_palette_bytes,       data=south_temperature_layer_q2_data
-        )
-
-        self.north_temperature_layer_q1_texture = cgpu.ColorChunk(
-            pos=(0,0), ctx=self.ctx, size=(600, 300), colors=temperature_palette_bytes,       data=north_temperature_layer_q1_data
-        )
-        self.south_temperature_layer_q1_texture = cgpu.ColorChunk(
-            pos=(0,-6000), ctx=self.ctx, size=(600, 300), colors=temperature_palette_bytes,       data=south_temperature_layer_q1_data
-        )
+        layers_to_delete = [
+            'upper_terrain_layer',
+            'lower_terrain_layer', 
+            'political_layer',
+            's_upper_terrain_layer',
+            's_lower_terrain_layer',
+            's_political_layer',
+            'north_climate_layer',
+            'south_climate_layer',
+            'north_temperature_layer_q1',
+            'north_temperature_layer_q2', 
+            'north_temperature_layer_q3',
+            'north_temperature_layer_q4',
+            'south_temperature_layer_q1',
+            'south_temperature_layer_q2',
+            'south_temperature_layer_q3',
+            'south_temperature_layer_q4'
+        ]
 
         try:
-            del self.upper_terrain_layer
-            del self.lower_terrain_layer
-            del self.political_layer
-            del self.s_upper_terrain_layer
-            del self.s_lower_terrain_layer
-            del self.s_political_layer
-            del self.north_climate_layer
-            del self.south_climate_layer
-            del self.north_temperature_layer_q1
-            del self.north_temperature_layer_q2
-            del self.north_temperature_layer_q3
-            del self.north_temperature_layer_q4
-            del self.south_temperature_layer_q1
-            del self.south_temperature_layer_q2
-            del self.south_temperature_layer_q3
-            del self.south_temperature_layer_q4
+            for layer in layers_to_delete:
+                if hasattr(self, layer):
+                    delattr(self, layer)
             print("O- freed up as much memory as possible")
-        except:
-            print("X- couldn't free up memory, good luck.")
+        except Exception as e:
+            print(f"X- couldn't free up memory: {str(e)}")
 
         def _create_keybind_label(text):
             return arcade.gui.UITextArea(
@@ -1384,6 +1258,7 @@ class Game(arcade.Window):
                 height=20,
                 font_size=10
             ).with_background(color=arcade.types.Color(10,10,10,255)).with_border(width=1,color=arcade.types.Color(30,30,30,255))
+        
         if self.is_keybind_box_disabled == False:
             print("?- Loading keybind popup")
 
@@ -1455,21 +1330,10 @@ class Game(arcade.Window):
                     self.north_climate_layer_texture.draw(size=(12000,6000))
                     self.south_climate_layer_texture.draw(size=(12000,6000))
 
-                if self.q1_temperature_visibility:
-                    self.north_temperature_layer_q1_texture.draw(size=(12000,6000))
-                    self.south_temperature_layer_q1_texture.draw(size=(12000,6000))
-
-                if self.q2_temperature_visibility:
-                    self.north_temperature_layer_q2_texture.draw(size=(12000,6000))
-                    self.south_temperature_layer_q2_texture.draw(size=(12000,6000))
-
-                if self.q3_temperature_visibility:
-                    self.north_temperature_layer_q3_texture.draw(size=(12000,6000))
-                    self.south_temperature_layer_q3_texture.draw(size=(12000,6000))
-
-                if self.q4_temperature_visibility:
-                    self.north_temperature_layer_q4_texture.draw(size=(12000,6000))
-                    self.south_temperature_layer_q4_texture.draw(size=(12000,6000))
+                for quarter in range(1, 5):
+                    if getattr(self, f'q{quarter}_temperature_visibility'):
+                        getattr(self, f'north_temperature_layer_q{quarter}_texture').draw(size=(12000,6000))
+                        getattr(self, f'south_temperature_layer_q{quarter}_texture').draw(size=(12000,6000))
 
             if self.political_background == True:
                 if self.has_map_been_loaded:
@@ -1499,22 +1363,18 @@ class Game(arcade.Window):
         self.civilian_information_layer.draw(pixelated=True)
         self.military_information_layer.draw(pixelated=True)
 
-        if self.misc_lines_1_visibility:
-            for shape_object in self.misc_lines_1:
-                if shape_object.shape:
-                    arcade.draw_line_strip(shape_object.shape,(255,255,255,255),1.25)
-        if self.misc_lines_2_visibility:
-            for shape_object in self.misc_lines_2:
-                if shape_object.shape:
-                    arcade.draw_line_strip(shape_object.shape,(255,255,255,255),1.25)
-        if self.misc_lines_3_visibility:
-            for shape_object in self.misc_lines_3:
-                if shape_object.shape:
-                    arcade.draw_line_strip(shape_object.shape,(255,255,255,255),1.25)
-        if self.misc_lines_4_visibility:
-            for shape_object in self.misc_lines_4:
-                if shape_object.shape:
-                    arcade.draw_line_strip(shape_object.shape,(255,255,255,255),1.25)
+        misc_lines_config = {
+            'misc_lines_1': (self.misc_lines_1_visibility, self.misc_lines_1),
+            'misc_lines_2': (self.misc_lines_2_visibility, self.misc_lines_2),
+            'misc_lines_3': (self.misc_lines_3_visibility, self.misc_lines_3),
+            'misc_lines_4': (self.misc_lines_4_visibility, self.misc_lines_4)
+        }
+
+        for visibility, shapes in misc_lines_config.values():
+            if visibility:
+                for shape_object in shapes:
+                    if shape_object.shape:
+                        arcade.draw_line_strip(shape_object.shape, (255,255,255,255), 1.25)
 
         civilian_layer = self.civilian_information_layer.get_sprite_list("0")
         military_layer = self.military_information_layer.get_sprite_list("0")
@@ -1649,20 +1509,20 @@ class Game(arcade.Window):
                 self.final_shape = self.current_shape[:]
                 self.current_shape = []
 
-                if self.selected_layer == 'civilian_information_layer':
-                    self.civilian_lines.append(nutil.Shape(self.final_shape))
-                elif self.selected_layer == 'military_information_layer':
-                    self.military_lines.append(nutil.Shape(self.final_shape))
-                elif self.selected_layer == 'misc_layer_4':
-                    self.misc_lines_4.append(nutil.Shape(self.final_shape))
-                elif self.selected_layer == 'misc_layer_3':
-                    self.misc_lines_3.append(nutil.Shape(self.final_shape))
-                elif self.selected_layer == 'misc_layer_2':
-                    self.misc_lines_2.append(nutil.Shape(self.final_shape))
-                elif self.selected_layer == 'misc_layer_1':
-                    self.misc_lines_1.append(nutil.Shape(self.final_shape))
+                layer_map = {
+                    'civilian_information_layer': self.civilian_lines,
+                    'military_information_layer': self.military_lines,
+                    'misc_layer_4': self.misc_lines_4,
+                    'misc_layer_3': self.misc_lines_3, 
+                    'misc_layer_2': self.misc_lines_2,
+                    'misc_layer_1': self.misc_lines_1
+                }
+
+                if self.selected_layer in layer_map:
+                    layer_map[self.selected_layer].append(nutil.Shape(self.final_shape))
+                    self.on_notification_toast(f"Added shape to {self.selected_layer}")
                 else:
-                    self.on_notification_toast("no layer received shape?", warn=True)
+                    self.on_notification_toast("No layer selected for shape", warn=True)
                 
         if button is arcade.MOUSE_BUTTON_LEFT:
             self.last_pressed_screen = (x, y)
@@ -1692,14 +1552,15 @@ class Game(arcade.Window):
                     self.current_shape.append(clicked_point)
                 elif self.selected_remove_line_tool:
                     if closest_shape:
-                        print(f"{closest_shape}\nclosest_point {closest_point} at index {index}, with a distance of={dist}")
-                        if len(closest_shape.shape) <= 2:
-                            closest_shape.shape.clear()
-                            del closest_shape
-                            print(f"I- removed full shape since there were less than 2 points")
-                        else:
-                            closest_shape.shape.pop(index)
-                            print(f"O- popped point in shape")
+                        if dist <= 16.0:
+                            print(f"{closest_shape}\nclosest_point {closest_point} at index {index}, with a distance of={dist}")
+                            if len(closest_shape.shape) <= 2:
+                                closest_shape.shape.clear()
+                                del closest_shape
+                                print(f"I- removed full shape since there were less than 2 points")
+                            else:
+                                closest_shape.shape.pop(index)
+                                print(f"O- popped point in shape")
                 else:
                     if self.selected_icon_id or self.selected_icon_id == 0:
                         if self.selected_icon_type == 'civilian':
