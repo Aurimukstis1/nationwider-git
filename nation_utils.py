@@ -349,30 +349,55 @@ CLIMATE_ID_MAP = {
 TEMPERATURE_ID_MAP = {
     0: (0, 0, 0), #none
     # ---
-    1: (0, 35, 135),
-    2: (40, 75, 170),
-    3: (65, 100, 195),
-    4: (90, 125, 225),
+    1: (0, 0, 121), # average -100C
+    2: (0, 35, 135), # average -90C
+    3: (8, 43, 142), # average -80C
+    4: (31, 66, 162), # average -70C
+    5: (40, 75, 170), # average -60C
+    6: (52, 92, 188), # average -50C
+    7: (86, 137, 236), # average -40C
+    8: (99, 155, 255), # average -30C
+    9: (78, 146, 186), # average -20C
+    10:(60, 134, 128), # average -10C
     # ---
-    5: (45, 130, 90),
-    6: (105, 170, 45),
-    7: (120, 210, 35),
-    8: (130, 225, 40),
+    11:(55, 148, 110), # average +0C/32F
     # ---
-    9: (250, 240, 55)
+    12:(105, 170, 45), # average +10C/50F
+    13:(120, 210, 35), # average +20C/68F
+    14:(203, 240, 50), # average +30C/86F
+    15:(250, 240, 55), # average +40C/104F
+    16:(233, 198, 54), # average +50C/122F
+    17:(233, 130, 45), # average +60C/140F
+    18:(236, 61, 23), # average +70C/158F
+    19:(203, 44, 25), # average +80C/176F
+    20:(237, 10, 10), # average +90C/194F
+    21:(255, 0, 0), # average +100C/212F
 }
 
 TEMPERATURE_PALETTE = {
     'erase/none': 0,
-    'average -40C/-40F': 1,
-    'average -30C/-22F': 2,
-    'average -20C/+4F': 3,
-    'average -10C/+14F': 4,
-    'average +0C/+32F': 5,
-    'average +10C/+50F': 6,
-    'average +20C/+68F': 7,
-    'average +30C/+86F': 8,
-    'average +40C/+104F': 9
+    # ---
+    'average -100C/-148F': 1,
+    'average -90C/-130F': 2,
+    'average -80C/-112F': 3,
+    'average -70C/-94F': 4,
+    'average -60C/-76F': 5,
+    'average -50C/-58F': 6,
+    'average -40C/-40F': 7,
+    'average -30C/-22F': 8,
+    'average -20C/+4F': 9,
+    'average -10C/+14F': 10,
+    'average +0C/+32F': 11,  
+    'average +10C/+50F': 12,
+    'average +20C/+68F': 13,
+    'average +30C/+86F': 14,
+    'average +40C/+104F': 15,
+    'average +50C/+122F': 16,
+    'average +60C/+140F': 17,
+    'average +70C/+158F': 18,
+    'average +80C/+176F': 19,
+    'average +90C/+194F': 20,
+    'average +100C/+212F': 21
 }
 
 TILE_ID_MAP         = {

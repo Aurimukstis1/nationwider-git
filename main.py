@@ -127,19 +127,21 @@ class Game(arcade.Window):
         self.current_shape          = []
         self.final_shape            = []
 
-        self.military_layer_export = True
-        self.civilian_layer_export = True
-        self.misc_lines_1_export = True
-        self.misc_lines_2_export = True
-        self.misc_lines_3_export = True
-        self.misc_lines_4_export = True
-        self.political_export = True
-        self.q4_export = True
-        self.q3_export = True
-        self.q2_export = True
-        self.q1_export = True
-        self.climate_export = True
-        self.biome_export = True
+        self.export_flags = {
+            "military_layer": True,
+            "civilian_layer": True,
+            "misc_lines_1": True,
+            "misc_lines_2": True,
+            "misc_lines_3": True,
+            "misc_lines_4": True,
+            "political": True,
+            "q4": True,
+            "q3": True,
+            "q2": True,
+            "q1": True,
+            "climate": True,
+            "biome": True
+        }
 
         self.military_icons = {
             'locations': []
@@ -295,6 +297,8 @@ class Game(arcade.Window):
         ]
 
         for idx, name in enumerate(civilian_icon_names):
+            label = arcade.gui.UILabel(text=name, font_size=10, align="center", height=8)
+            button_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=0)
             icon_texture = arcade.load_texture(f"{nutil.CIVILIAN_ICON_ID_MAP.get(idx)}.png")
             button = arcade.gui.UIFlatButton(text="", width=64, height=64)
             button.add(
@@ -302,7 +306,9 @@ class Game(arcade.Window):
                 anchor_x="center",
                 anchor_y="center"
             )
-            self.icon_civilian_grid.add(button, idx % 5, idx // 5)
+            button_wrapper.add(button)
+            button_wrapper.add(label)
+            self.icon_civilian_grid.add(button_wrapper, idx % 5, idx // 5)
             @button.event
             def on_click(event: arcade.gui.UIOnClickEvent, idx=idx, name=name):
                 self.selected_icon_id = idx
@@ -310,6 +316,8 @@ class Game(arcade.Window):
                 self.on_notification_toast(f"Selected {idx} {name}")
 
         for idx, name in enumerate(military_icon_names):
+            label = arcade.gui.UILabel(text=name, font_size=10, align="center", height=8)
+            button_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=0)
             icon_texture = arcade.load_texture(f"{nutil.MILITARY_ICON_ID_MAP.get(idx)}.png")
             button = arcade.gui.UIFlatButton(text="", width=64, height=64)
             button.add(
@@ -317,7 +325,9 @@ class Game(arcade.Window):
                 anchor_x="center",
                 anchor_y="center"
             )
-            self.icon_military_grid.add(button, idx % 5, idx // 5)
+            button_wrapper.add(button)
+            button_wrapper.add(label)
+            self.icon_military_grid.add(button_wrapper, idx % 5, idx // 5)
             @button.event
             def on_click(event: arcade.gui.UIOnClickEvent, idx=idx, name=name):
                 self.selected_icon_id = idx
@@ -334,7 +344,7 @@ class Game(arcade.Window):
         ).with_background(color=arcade.types.Color(0,0,0,100))
         palette_toggle_buttons = layers_box.add(
             arcade.gui.UIBoxLayout(vertical=True, space_between=1)
-        )
+        ).with_background(color=arcade.types.Color(0,0,0,100))
 
         biome_palette_buttons = self.bottom_anchor.add(
             arcade.gui.UIBoxLayout(
@@ -379,32 +389,33 @@ class Game(arcade.Window):
         def _create_export_toggle(self, label: str, export_attr: str):
             layout = arcade.gui.UIBoxLayout(vertical=False, space_between=4)
             
-            status_label = arcade.gui.UILabel(width=128, height=32, text=f"{getattr(self, export_attr)}")
+            status_label = arcade.gui.UILabel(width=128, height=32, text=f"{self.export_flags[export_attr]}")
             toggle_button = arcade.gui.UIFlatButton(width=128, height=32, text=label)
 
             @toggle_button.event
             def on_click(event: arcade.gui.UIOnClickEvent):
-                current_value = getattr(self, export_attr)
-                setattr(self, export_attr, not current_value)
-                status_label.text = f"{getattr(self, export_attr)}"
+                current_value = self.export_flags[export_attr]
+                self.export_flags[export_attr] = not current_value
+                status_label.text = f"{self.export_flags[export_attr]}"
 
             layout.add(status_label)
             layout.add(toggle_button)
 
             return layout
-        self.escape_buttons.add(_create_export_toggle(self, "Military Layer", "military_layer_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Civilian Layer", "civilian_layer_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 1", "misc_lines_1_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 2", "misc_lines_2_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 3", "misc_lines_3_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 4", "misc_lines_4_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Political", "political_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Q4", "q4_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Q3", "q3_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Q2", "q2_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Q1", "q1_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Climate", "climate_export"))
-        self.escape_buttons.add(_create_export_toggle(self, "Biome", "biome_export"))
+        
+        self.escape_buttons.add(_create_export_toggle(self, "Military Layer", "military_layer"))
+        self.escape_buttons.add(_create_export_toggle(self, "Civilian Layer", "civilian_layer"))
+        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 1", "misc_lines_1"))
+        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 2", "misc_lines_2"))
+        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 3", "misc_lines_3"))
+        self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 4", "misc_lines_4"))
+        self.escape_buttons.add(_create_export_toggle(self, "Political", "political"))
+        self.escape_buttons.add(_create_export_toggle(self, "Q4", "q4"))
+        self.escape_buttons.add(_create_export_toggle(self, "Q3", "q3"))
+        self.escape_buttons.add(_create_export_toggle(self, "Q2", "q2"))
+        self.escape_buttons.add(_create_export_toggle(self, "Q1", "q1"))
+        self.escape_buttons.add(_create_export_toggle(self, "Climate", "climate"))
+        self.escape_buttons.add(_create_export_toggle(self, "Biome", "biome"))
 
         save_button = arcade.gui.UIFlatButton(width=256,height=64,text=f"Save to File")
         @save_button.event
@@ -531,7 +542,7 @@ class Game(arcade.Window):
         # --- toggles
         self.layer_select_buttons = {}
         selection_text = ">"
-        deselection_text = ">"
+        deselection_text = ""
 
         selected_style = {
             "normal":   arcade.gui.UIFlatButton.UIStyle(bg=(40,150,80,255)),
@@ -551,7 +562,7 @@ class Game(arcade.Window):
             buttons = wrapper.add(
                 arcade.gui.UIBoxLayout(vertical=False, space_between=1)
             )
-            select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
+            select = arcade.gui.UIFlatButton(text=deselection_text, width=32, height=32)
             self.layer_select_buttons[layer_name] = select
             toggle = arcade.gui.UIFlatButton(text="", width=64, height=48)
             toggle.add(
@@ -595,7 +606,7 @@ class Game(arcade.Window):
             buttons = wrapper.add(
                 arcade.gui.UIBoxLayout(vertical=False, space_between=1)
             )
-            select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
+            select = arcade.gui.UIFlatButton(text=deselection_text, width=32, height=32)
             self.layer_select_buttons[f'{layer_prefix}_information'] = select
             toggle = arcade.gui.UIFlatButton(text="", width=64, height=48)
             toggle.add(
@@ -642,94 +653,34 @@ class Game(arcade.Window):
         _create_information_layer_toggle('civilian', layer_toggle_buttons)
         _create_information_layer_toggle('military', layer_toggle_buttons)
 
-        _create_layer_toggle('political', layer_toggle_buttons, political_layer_button_icon, 'country_visibility')
+        _create_layer_toggle('political_layer', layer_toggle_buttons, political_layer_button_icon, 'country_visibility')
 
-        temperature_q4_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        temperature_q4_layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
-        self.layer_select_buttons['temperature_layer_q4'] = temperature_q4_layer_select
-        temperature_q4_toggle = arcade.gui.UIFlatButton(text="q4 temp", width=64, height=32)
-        temperature_q4_buttons.add(temperature_q4_layer_select)
-        temperature_q4_buttons.add(temperature_q4_toggle)
-        @temperature_q4_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.q4_temperature_visibility = not self.q4_temperature_visibility
-        @temperature_q4_layer_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'temperature_layer_q4'
-            for key, btn in self.layer_select_buttons.items():
-                btn.text = deselection_text
-                btn.style = deselected_style
-            temperature_q4_layer_select.text = selection_text
-            temperature_q4_layer_select.style = selected_style
-            self.on_notification_toast("selected temperature q4 layer")
+        for q in range(4, 0, -1):
+            temperature_buttons = layer_toggle_buttons.add(
+                arcade.gui.UIBoxLayout(vertical=False, space_between=1)
+            )
+            layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
+            self.layer_select_buttons[f'temperature_layer_q{q}'] = layer_select
+            toggle = arcade.gui.UIFlatButton(text=f"q{q} temp", width=64, height=32)
+            temperature_buttons.add(layer_select)
+            temperature_buttons.add(toggle)
 
-        temperature_q3_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        temperature_q3_layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
-        self.layer_select_buttons['temperature_layer_q3'] = temperature_q3_layer_select
-        temperature_q3_toggle = arcade.gui.UIFlatButton(text="q3 temp", width=64, height=32)
-        temperature_q3_buttons.add(temperature_q3_layer_select)
-        temperature_q3_buttons.add(temperature_q3_toggle)
-        @temperature_q3_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.q3_temperature_visibility = not self.q3_temperature_visibility
-        @temperature_q3_layer_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'temperature_layer_q3'
-            for key, btn in self.layer_select_buttons.items():
-                btn.text = deselection_text
-                btn.style = deselected_style
-            temperature_q3_layer_select.text = selection_text
-            temperature_q3_layer_select.style = selected_style
-            self.on_notification_toast("selected temperature q3 layer")
+            @toggle.event
+            def on_click(event: arcade.gui.UIOnClickEvent, q=q):
+                setattr(self, f'q{q}_temperature_visibility', not getattr(self, f'q{q}_temperature_visibility'))
 
-        temperature_q2_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        temperature_q2_layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
-        self.layer_select_buttons['temperature_layer_q2'] = temperature_q2_layer_select
-        temperature_q2_toggle = arcade.gui.UIFlatButton(text="q2 temp", width=64, height=32)
-        temperature_q2_buttons.add(temperature_q2_layer_select)
-        temperature_q2_buttons.add(temperature_q2_toggle)
-        @temperature_q2_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.q2_temperature_visibility = not self.q2_temperature_visibility
-        @temperature_q2_layer_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'temperature_layer_q2'
-            for key, btn in self.layer_select_buttons.items():
-                btn.text = deselection_text
-                btn.style = deselected_style
-            temperature_q2_layer_select.text = selection_text
-            temperature_q2_layer_select.style = selected_style
-            self.on_notification_toast("selected temperature q2 layer")
+            @layer_select.event
+            def on_click(event: arcade.gui.UIOnClickEvent, q=q, select=layer_select):
+                self.selected_layer = f'temperature_layer_q{q}'
+                for key, btn in self.layer_select_buttons.items():
+                    btn.text = deselection_text
+                    btn.style = deselected_style
+                select.text = selection_text
+                select.style = selected_style
+                self.on_notification_toast(f"selected temperature q{q} layer")
 
-        temperature_q1_buttons = layer_toggle_buttons.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=1)
-        )
-        temperature_q1_layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
-        self.layer_select_buttons['temperature_layer_q1'] = temperature_q1_layer_select
-        temperature_q1_toggle = arcade.gui.UIFlatButton(text="q1 temp", width=64, height=32)
-        temperature_q1_buttons.add(temperature_q1_layer_select)
-        temperature_q1_buttons.add(temperature_q1_toggle)
-        @temperature_q1_toggle.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.q1_temperature_visibility = not self.q1_temperature_visibility
-        @temperature_q1_layer_select.event
-        def on_click(event: arcade.gui.UIOnClickEvent):
-            self.selected_layer = 'temperature_layer_q1'
-            for key, btn in self.layer_select_buttons.items():
-                btn.text = deselection_text
-                btn.style = deselected_style
-            temperature_q1_layer_select.text = selection_text
-            temperature_q1_layer_select.style = selected_style
-            self.on_notification_toast("selected temperature q1 layer")
-
-        _create_layer_toggle('climate', layer_toggle_buttons, climate_layer_button_icon, 'climate_visibility')
-        _create_layer_toggle('biome', layer_toggle_buttons, geography_layer_button_icon, 'biome_visibility')
+        _create_layer_toggle('climate_layer', layer_toggle_buttons, climate_layer_button_icon, 'climate_visibility')
+        _create_layer_toggle('biome_layer', layer_toggle_buttons, geography_layer_button_icon, 'biome_visibility')
         # ---
         palette_groups = {
             "biome": biome_palette_buttons,
@@ -937,38 +888,38 @@ class Game(arcade.Window):
             q4n_grid = 0
             q4s_grid = 0
 
-            if self.biome_export == True:
+            if self.export_flags["biome"] == True:
                 a_grid = np.frombuffer(self.north_upper_terrain_layer_texture.read(), dtype="u1")
                 c_grid = np.frombuffer(self.north_lower_terrain_layer_texture.read(), dtype="u1")
 
                 a_s_grid = np.frombuffer(self.south_upper_terrain_layer_texture.read(), dtype="u1")
                 c_s_grid = np.frombuffer(self.south_lower_terrain_layer_texture.read(), dtype="u1")
 
-            if self.political_export == True:
+            if self.export_flags["political"] == True:
                 b_grid = np.frombuffer(self.north_political_layer_texture.read(), dtype="u1")
                 b_s_grid = np.frombuffer(self.south_political_layer_texture.read(), dtype="u1")
 
-            if self.climate_export == True:
+            if self.export_flags["climate"] == True:
                 d_grid = np.frombuffer(self.north_climate_layer_texture.read(), dtype="u1")
                 d_s_grid = np.frombuffer(self.south_climate_layer_texture.read(), dtype="u1")
 
-            if self.q1_export:
+            if self.export_flags["q1"]:
                 q1n_grid = np.frombuffer(self.north_temperature_layer_q1_texture.read(), dtype="u1")
                 q1s_grid = np.frombuffer(self.north_temperature_layer_q1_texture.read(), dtype="u1")
 
-            if self.q2_export:
+            if self.export_flags["q2"]:
                 q2n_grid = np.frombuffer(self.north_temperature_layer_q2_texture.read(), dtype="u1")
                 q2s_grid = np.frombuffer(self.north_temperature_layer_q2_texture.read(), dtype="u1")
 
-            if self.q3_export:
+            if self.export_flags["q3"]:
                 q3n_grid = np.frombuffer(self.north_temperature_layer_q3_texture.read(), dtype="u1")
                 q3s_grid = np.frombuffer(self.north_temperature_layer_q3_texture.read(), dtype="u1")
 
-            if self.q4_export:
+            if self.export_flags["q4"]:
                 q4n_grid = np.frombuffer(self.north_temperature_layer_q4_texture.read(), dtype="u1")
                 q4s_grid = np.frombuffer(self.north_temperature_layer_q4_texture.read(), dtype="u1")
 
-            if self.civilian_layer_export == True:
+            if self.export_flags["civilian_layer"] == True:
                 icon_layer = self.civilian_information_layer.get_sprite_list("0")
                 for icon in icon_layer:
                     icon_data = {
@@ -979,7 +930,7 @@ class Game(arcade.Window):
                     }
                     self.civilian_icons['locations'].append(icon_data)
             
-            if self.military_layer_export == True:
+            if self.export_flags["military_layer"] == True:
                 icon_layer = self.military_information_layer.get_sprite_list("0")
                 for icon in icon_layer:
                     icon_data = {
@@ -999,12 +950,12 @@ class Game(arcade.Window):
                     shapes_dict['shapes'].append(obj.shape if use_shape_attr else obj)
                 return shapes_dict
 
-            civilian_lines_dict = _create_shapes_dict(self.civilian_lines) if self.civilian_layer_export else None
-            military_lines_dict = _create_shapes_dict(self.military_lines) if self.military_layer_export else None
-            misc_lines_1_dict = _create_shapes_dict(self.misc_lines_1, False) if self.misc_lines_1_export else None
-            misc_lines_2_dict = _create_shapes_dict(self.misc_lines_2, False) if self.misc_lines_2_export else None
-            misc_lines_3_dict = _create_shapes_dict(self.misc_lines_3, False) if self.misc_lines_3_export else None 
-            misc_lines_4_dict = _create_shapes_dict(self.misc_lines_4, False) if self.misc_lines_4_export else None
+            civilian_lines_dict = _create_shapes_dict(self.civilian_lines) if self.export_flags["civilian_layer"] else None
+            military_lines_dict = _create_shapes_dict(self.military_lines) if self.export_flags["military_layer"] else None
+            misc_lines_1_dict = _create_shapes_dict(self.misc_lines_1, False) if self.export_flags["misc_lines_1"] else None
+            misc_lines_2_dict = _create_shapes_dict(self.misc_lines_2, False) if self.export_flags["misc_lines_2"] else None
+            misc_lines_3_dict = _create_shapes_dict(self.misc_lines_3, False) if self.export_flags["misc_lines_3"] else None 
+            misc_lines_4_dict = _create_shapes_dict(self.misc_lines_4, False) if self.export_flags["misc_lines_4"] else None
 
             print("?- trying np.savez_compressed ...")
             timer = time.time()
