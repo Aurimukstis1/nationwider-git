@@ -380,10 +380,10 @@ class Game(arcade.Window):
             anchor_y="center"
         )
         layer_toggle_buttons = layers_box.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1))
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
         ).with_background(color=arcade.types.Color(0,0,0,100))
         palette_toggle_buttons = layers_box.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1))
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
         ).with_background(color=arcade.types.Color(0,0,0,100))
 
         self.hover_label = arcade.gui.UILabel(text="", font_size=12, align="center", width=32)
@@ -621,7 +621,7 @@ class Game(arcade.Window):
 
         def _create_layer_toggle(layer_name, layer_toggle_buttons, texture, visibility_attr):
             wrapper = layer_toggle_buttons.add(
-                arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1))
+                arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
             )
             buttons = wrapper.add(
                 arcade.gui.UIBoxLayout(vertical=False, space_between=2)
@@ -665,7 +665,7 @@ class Game(arcade.Window):
 
         def _create_information_layer_toggle(layer_prefix, layer_toggle_buttons):
             wrapper = layer_toggle_buttons.add(
-                arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1))
+                arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
             )
             buttons = wrapper.add(
                 arcade.gui.UIBoxLayout(vertical=False, space_between=2)
@@ -710,17 +710,6 @@ class Game(arcade.Window):
             )
             wrapper.add(label)
 
-        # for i in range(15):
-        #     button = arcade.gui.UIFlatButton(
-        #         text=f"Button {i}",
-        #         size_hint=(
-        #             None,  # The buttons will be not modified regarding their width
-        #             1,  # The button will try to fill the height of the box,
-        #             # but share the space with other buttons
-        #         ),
-        #     )
-        #     layer_toggle_buttons.add(button)
-
         _create_information_layer_toggle('misc4', layer_toggle_buttons)
         _create_information_layer_toggle('misc3', layer_toggle_buttons)
         _create_information_layer_toggle('misc2', layer_toggle_buttons)
@@ -731,29 +720,29 @@ class Game(arcade.Window):
 
         _create_layer_toggle('political_layer', layer_toggle_buttons, political_layer_button_icon, 'political_visibility')
 
-        # for q in range(4, 0, -1):
-        #     temperature_buttons = layer_toggle_buttons.add(
-        #         arcade.gui.UIBoxLayout(vertical=False, space_between=1, size_hint=(None, 1))
-        #     )
-        #     layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
-        #     self.layer_select_buttons[f'temperature_layer_q{q}'] = layer_select
-        #     toggle = arcade.gui.UIFlatButton(text=f"q{q} temp", width=64, height=32)
-        #     temperature_buttons.add(layer_select)
-        #     temperature_buttons.add(toggle)
+        for q in range(4, 0, -1):
+            temperature_buttons = layer_toggle_buttons.add(
+                arcade.gui.UIBoxLayout(vertical=False, space_between=1, size_hint=(1, 1))
+            )
+            layer_select = arcade.gui.UIFlatButton(text=selection_text, width=32, height=32)
+            self.layer_select_buttons[f'temperature_layer_q{q}'] = layer_select
+            toggle = arcade.gui.UIFlatButton(text=f"q{q} temp", width=64, height=32)
+            temperature_buttons.add(layer_select)
+            temperature_buttons.add(toggle)
 
-        #     @toggle.event
-        #     def on_click(event: arcade.gui.UIOnClickEvent, q=q):
-        #         self.visibility_flags[f'q{q}_temperature_layer'] = not self.visibility_flags[f'q{q}_temperature_layer']
+            @toggle.event
+            def on_click(event: arcade.gui.UIOnClickEvent, q=q):
+                self.visibility_flags[f'q{q}_temperature_layer'] = not self.visibility_flags[f'q{q}_temperature_layer']
 
-        #     @layer_select.event
-        #     def on_click(event: arcade.gui.UIOnClickEvent, q=q, select=layer_select):
-        #         self.selected_layer = f'temperature_layer_q{q}'
-        #         for key, btn in self.layer_select_buttons.items():
-        #             btn.text = deselection_text
-        #             btn.style = deselected_style
-        #         select.text = selection_text
-        #         select.style = selected_style
-        #         self.on_notification_toast(f"selected temperature q{q} layer")
+            @layer_select.event
+            def on_click(event: arcade.gui.UIOnClickEvent, q=q, select=layer_select):
+                self.selected_layer = f'temperature_layer_q{q}'
+                for key, btn in self.layer_select_buttons.items():
+                    btn.text = deselection_text
+                    btn.style = deselected_style
+                select.text = selection_text
+                select.style = selected_style
+                self.on_notification_toast(f"selected temperature q{q} layer")
 
         # this ddoesnt work ^^^
 
