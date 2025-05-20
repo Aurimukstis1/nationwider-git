@@ -144,20 +144,6 @@ class Game(arcade.Window):
         self.military_information_layer = nutil.InformationLayer("military_layer")
         self.civilian_information_layer = nutil.InformationLayer("civilian_layer")
 
-        # self.misc1_visibility = True
-        # self.misc2_visibility = True
-        # self.misc3_visibility = True
-        # self.misc4_visibility = True
-        # self.military_visibility = True
-        # self.civilian_visibility = True
-        # self.political_visibility = True
-        # self.q1_temperature_visibility = False
-        # self.q2_temperature_visibility = False
-        # self.q3_temperature_visibility = False
-        # self.q4_temperature_visibility = False
-        # self.climate_visibility = False
-        # self.biome_visibility = True
-
         self.visibility_flags = {
             "misc1_layer": True,
             "misc2_layer": True,
@@ -325,7 +311,8 @@ class Game(arcade.Window):
         self.default_brushes.add(line_tool_remove_button)
 
         civilian_icon_names = [
-            "village", "town", "city", "metro"
+            "village", "town", "city", "metro", "0/5 progress", 
+            "1/5 progress", "2/5 progress", "3/5 progress", "4/5 progress", "5/5 progress"
         ]
 
         military_icon_names = [

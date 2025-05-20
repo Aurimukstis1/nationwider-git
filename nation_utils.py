@@ -27,12 +27,34 @@ class Icon:
     This class provides base functionality for map icons, with specialized subclasses
     for civilian and military icons.
     """
+    class Misc(arcade.Sprite):
+        """A miscellaneous icon that can be placed on the map.
+        
+        Args:
+            path_or_texture (arcade.texture, optional): Texture to use for the icon. Defaults to None.
+            scale (float, optional): Scale factor for the icon size. Defaults to 1.
+            center (tuple, optional): (x,y) position to place icon. Defaults to (None,None).
+            angle (float, optional): Rotation angle in degrees. Defaults to 0.
+            icon_id (int, optional): ID indicating icon type. Defaults to 0.
+            unique_id (int, optional): Unique identifier for this specific icon. Defaults to 0.
+        """
+        def __init__(self,
+                    path_or_texture:arcade.texture = None,
+                    scale:float = 1,
+                    center:tuple = (None,None),
+                    angle:float = 0,
+                    icon_id:int = 0,
+                    unique_id:int = 0,
+                    **kwargs):
+            super().__init__(path_or_texture, scale, center[0], center[1], angle, **kwargs)
+            self.icon_id = icon_id
+            self.unique_id = unique_id
+
     class Civilian(arcade.Sprite):
         """A civilian icon that can be placed on the map.
         
         Args:
             path_or_texture (arcade.texture, optional): Texture to use for the icon. Defaults to None.
-            layer_name (str, optional): Name of the layer to add the icon to. Defaults to "".
             scale (float, optional): Scale factor for the icon size. Defaults to 1.
             center (tuple, optional): (x,y) position to place icon. Defaults to (None,None).
             angle (float, optional): Rotation angle in degrees. Defaults to 0.
@@ -57,7 +79,6 @@ class Icon:
         
         Args:
             path_or_texture (arcade.texture, optional): Texture to use for the icon. Defaults to None.
-            layer_name (str, optional): Name of the layer to add the icon to. Defaults to "".
             scale (float, optional): Scale factor for the icon size. Defaults to 1.
             center (tuple, optional): (x,y) position to place icon. Defaults to (None,None).
             angle (float, optional): Rotation angle in degrees. Defaults to 0.
@@ -513,6 +534,13 @@ CIVILIAN_ICON_ID_MAP = {
     1: "icons/structures/str_town",
     2: "icons/structures/str_city",
     3: "icons/structures/str_metro",
+    # ---
+    4: "icons/structures/str_progress_0",
+    5: "icons/structures/str_progress_1",
+    6: "icons/structures/str_progress_2",
+    7: "icons/structures/str_progress_3",
+    8: "icons/structures/str_progress_4",
+    9: "icons/structures/str_progress_5",
 }
 
 MILITARY_ICON_ID_MAP = {
