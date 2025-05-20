@@ -1,16 +1,16 @@
-"""
-Colored tile system using textures
-"""
-
 import random
 import struct
 from arcade.gl import geometry
 import arcade
+from PIL import Image
+import numpy as np
 
+"""
+Colored tile system using textures
+"""
 
 class ColorChunk:
     """An RGBA color chunk."""
-
     def __init__(
         self,
         pos: tuple[int, int],
@@ -20,7 +20,6 @@ class ColorChunk:
         colors: bytes | None = None,
     ) -> None:
         self.ctx = ctx
-
         self.pos = pos
         self.size = size
         self.width = size[0]
@@ -91,8 +90,9 @@ class ColorChunk:
         self._texture.write(
             data=struct.pack("B", tile_id), viewport=(position[0], position[1], 1, 1)
         )
-    
+
     def clear(self):
+        """Clear the chunk"""
         self._fbo.clear()
         
     def read(self) -> bytes:
@@ -118,3 +118,48 @@ class ColorChunk:
     def update_shader(self, time:float = 1.0):
         """update variables in the chunk's shader"""
         self._program["time"] = time
+        
+    def get_image(self):
+        """Export the chunk as an image file"""
+        return data_to_image(self)
+
+
+def data_to_image(chunk: ColorChunk) -> Image.Image:
+    """
+    Convert a ColorChunk to a PIL Image with proper coloring.
+    
+    Args:
+        chunk: The ColorChunk object to convert
+        
+    Returns:
+        PIL Image with the properly colored texture
+    """
+    # Get the raw tile ID data
+    raw_data = chunk.read()
+    
+    # Convert bytes to numpy array of tile IDs
+    tile_ids = np.frombuffer(raw_data, dtype=np.uint8).reshape(chunk.height, chunk.width)
+    
+    # Read color palette data
+    color_palette_data = chunk._color_texture.read()
+    
+    # Convert color palette to usable format (256 RGBA colors)
+    color_palette = np.frombuffer(color_palette_data, dtype=np.uint8).reshape(256, 4)
+    
+    # Create RGB image array (height, width, 3)
+    img_array = np.zeros((chunk.height, chunk.width, 3), dtype=np.uint8)
+    
+    # Map each tile ID to its color
+    for y in range(chunk.height):
+        for x in range(chunk.width):
+            tile_id = tile_ids[y, x]
+            if tile_id < 256:  # Ensure valid index
+                img_array[y, x, 0] = color_palette[tile_id][0]  # R
+                img_array[y, x, 1] = color_palette[tile_id][1]  # G
+                img_array[y, x, 2] = color_palette[tile_id][2]  # B
+
+    # Flip image
+    img_array = np.flipud(img_array)
+    
+    # Create PIL Image from array
+    return Image.fromarray(img_array)

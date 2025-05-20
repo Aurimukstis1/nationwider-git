@@ -32,6 +32,7 @@ class Icon:
         
         Args:
             path_or_texture (arcade.texture, optional): Texture to use for the icon. Defaults to None.
+            layer_name (str, optional): Name of the layer to add the icon to. Defaults to "".
             scale (float, optional): Scale factor for the icon size. Defaults to 1.
             center (tuple, optional): (x,y) position to place icon. Defaults to (None,None).
             angle (float, optional): Rotation angle in degrees. Defaults to 0.
@@ -56,6 +57,7 @@ class Icon:
         
         Args:
             path_or_texture (arcade.texture, optional): Texture to use for the icon. Defaults to None.
+            layer_name (str, optional): Name of the layer to add the icon to. Defaults to "".
             scale (float, optional): Scale factor for the icon size. Defaults to 1.
             center (tuple, optional): (x,y) position to place icon. Defaults to (None,None).
             angle (float, optional): Rotation angle in degrees. Defaults to 0.
@@ -83,6 +85,48 @@ class Icon:
             self.country_id = country_id
             self.angle_rot = angle_rot
             self.quality = quality
+
+class Shape():
+    """A class representing a shape made up of connected points.
+
+    The Shape class stores a list of points that define a shape, along with a unique identifier.
+    It is used to draw line shapes on the map.
+
+    Attributes:
+        shape (list): List of points (x,y tuples) defining the shape
+        unique_id (int): Random unique identifier between 10000-99999
+
+    Args:
+        input_shape (list, optional): Initial list of points for the shape. Defaults to empty list.
+    """
+    def __init__(self, input_shape:list = []):
+        self.shape = input_shape
+        self.unique_id:int = random.randrange(10000,99999)
+
+class InformationLayer():
+    """
+    An abstract class for information layers with no grid, containing just icons and lines.
+    """
+    def __init__(self, name:str):
+        self.name = name
+        self.shapes = []
+        self.scene = arcade.Scene()
+        self.scene.add_sprite_list("0")
+        # ---
+        self.canvas = self.scene.get_sprite_list("0")
+
+    def wipe(self):
+        self.shapes.clear()
+        self.canvas.clear()
+
+    def add_icon(self, icon:Icon):
+        self.canvas.append(icon)
+
+    def add_shape(self, shape:Shape):
+        self.shapes.append(shape)
+
+    def remove_shape(self, shape:Shape):
+        self.shapes.remove(shape)
 
 class Toast(arcade.gui.UILabel):
     """A temporary notification label that automatically removes itself after a duration.
@@ -116,23 +160,6 @@ class Toast(arcade.gui.UILabel):
 
         if self.time > self.duration:
             self.parent.remove(self)
-
-class Shape():
-    """A class representing a shape made up of connected points.
-
-    The Shape class stores a list of points that define a shape, along with a unique identifier.
-    It is used to draw line shapes on the map.
-
-    Attributes:
-        shape (list): List of points (x,y tuples) defining the shape
-        unique_id (int): Random unique identifier between 10000-99999
-
-    Args:
-        input_shape (list, optional): Initial list of points for the shape. Defaults to empty list.
-    """
-    def __init__(self, input_shape:list = []):
-        self.shape = input_shape
-        self.unique_id:int = random.randrange(10000,99999)
 
 class GridLayer():
     """A 2D grid layer for storing map data.
