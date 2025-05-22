@@ -10,8 +10,10 @@ def download_latest_release():
             f.write(response.content)
         print("replacing ...")
         # replace old exe
-        os.remove("main.exe")
-        os.rename("new_version.exe.tmp", "main.exe")
+        if os.path.exists("main.exe"):
+            os.remove("main.exe")
+        if os.path.exists("new_version.exe.tmp"):
+            os.rename("new_version.exe.tmp", "main.exe")
     except Exception as e:
         print(f"Error: {e}")
     
