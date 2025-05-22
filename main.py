@@ -1,4 +1,5 @@
 import itertools
+import os
 import arcade
 import arcade.gui
 import arcade.gui.widgets
@@ -9,6 +10,8 @@ import random
 import nation_utils as nutil
 import time
 import chunk_gpu as cgpu
+import boto3
+import json
 from PIL import Image
 # display settings; ts pmo fr rn 
 WIDTH, HEIGHT = 1920, 1080
@@ -31,17 +34,22 @@ if __name__ == "__main__":
         brush_deselect_icon_texture = arcade.load_texture('icons/brush_deselect_icon.png')
         brush_random_icon_texture = arcade.load_texture('icons/brush_random_icon.png')
 
-        spring_toggle_button_icon = arcade.load_texture('icons/spring_layer_button_icon.png')
-        summer_toggle_button_icon = arcade.load_texture('icons/summer_layer_button_icon.png')
-        autumn_toggle_button_icon = arcade.load_texture('icons/autumn_layer_button_icon.png')
-        winter_toggle_button_icon = arcade.load_texture('icons/winter_layer_button_icon.png')
-
         temperature_palette_button_icon = arcade.load_texture('icons/temperature_palette_button_icon.png')
+
         print("O- imagefiles found and loaded")
     except:
         print(f"X- {Exception}/imagefiles not found")
 
+try:
+    with open('local_data/server_keys.json', 'r') as f:
+        server_keys = json.load(f)
+        aws_access_key_id = server_keys['api_key']
+        aws_secret_access_key = server_keys['secret_key']
 
+    s3_client = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+    s3_resource = boto3.resource('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+except:
+    print(f"X- {Exception}/server_keys.json not found")
 
 class Game(arcade.Window):
     def __init__(self, width, height, title):
@@ -134,7 +142,8 @@ class Game(arcade.Window):
             "q2_temperature_layer": True,
             "q1_temperature_layer": True,
             "climate_layer": True,
-            "biome_layer": True
+            "biome_layer": True,
+            "upload_to_cloud": False
         }
         
         self.misc1_information_layer = nutil.InformationLayer("misc1_layer")
@@ -201,14 +210,52 @@ class Game(arcade.Window):
         self.keybinds_box = self.center_anchor.add(arcade.gui.UIBoxLayout(space_between=0), anchor_x="center", anchor_y="center")
         self.is_keybind_box_disabled = False
 
+        online_savefiles = []
+        try:
+            nationwide_bucket = s3_resource.Bucket('nationwide-galaina')
+            for savefile_object in nationwide_bucket.objects.all():
+                online_savefiles.append(savefile_object.key)
+        except:
+            print(f"X- {Exception}/nationwide-galaina bucket not found")
+        if online_savefiles:
+            self.online_load_menu_box = self.center_anchor.add(
+                arcade.gui.UIGridLayout(
+                    column_count=5,
+                    row_count=5,
+                    vertical_spacing=2,
+                    horizontal_spacing=2
+                ),
+                anchor_x="center",
+                anchor_y="top"
+            )
+            # only leave the last 5 savefiles, deal with it
+            online_savefiles = online_savefiles[-5:]
+            for i, savefile in enumerate(online_savefiles):
+                savefile_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=1)
+                savefile_button = arcade.gui.UIFlatButton(width=256,height=96,text=f"{savefile.split('\\')[-1]}")
+                savefile_wrapper.add(arcade.gui.UILabel(text=f"{savefile.split('\\')[-1]}", font_size=10, align="center", height=8))
+                savefile_wrapper.add(savefile_button)
+                self.online_load_menu_box.add(savefile_wrapper, i % 5, i // 5)
+
+                @savefile_button.event
+                def on_click(event: arcade.gui.UIOnClickEvent, savename=savefile, index=i):
+                    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+                    with open(f'local_data/temporary_downloaded_savefile.npz', 'wb') as writable_file:
+                        s3.download_fileobj('nationwide-galaina', savename, writable_file)
+                    self.on_clicked_load(f'local_data/temporary_downloaded_savefile.npz')
+                    os.remove(f'local_data/temporary_downloaded_savefile.npz')
+                    self.online_load_menu_box.visible = False
+                    self.online_load_menu_box.clear()
+                    self.load_menu_box.visible = False
+                    self.load_menu_box.clear()
+
         savefiles = nutil.get_all_files('map_data')
         attributes_data = nutil.get_attributes()
         self.is_keybind_box_disabled = attributes_data['keybinds_disable']
 
         if savefiles:
-            # menu for savefiles
-            # each savefile is a rectangular button which could support the name, and thumbnail
-            load_menu_box = self.center_anchor.add(
+            # menu for savefiles, crazy i know
+            self.load_menu_box = self.center_anchor.add(
                 arcade.gui.UIGridLayout(
                     column_count=5,
                     row_count=5,
@@ -235,13 +282,15 @@ class Game(arcade.Window):
                     )
                 except Exception as e:
                     print(f"X- failed to load thumbnail for {savefile}: {e}")
-                load_menu_box.add(savefile_wrapper, i % 5, i // 5)
+                self.load_menu_box.add(savefile_wrapper, i % 5, i // 5)
 
                 @savefile_button.event
                 def on_click(event: arcade.gui.UIOnClickEvent, savename=savefile, index=i):
                     self.on_clicked_load(savename)
-                    load_menu_box.visible = False
-                    load_menu_box.clear()
+                    self.load_menu_box.visible = False
+                    self.load_menu_box.clear()
+                    self.online_load_menu_box.visible = False
+                    self.online_load_menu_box.clear()
         else:
             print("I- NO MAPS WERE FOUND / LOADING DEFAULT ...")
             self.on_clicked_load('local_data/default_mapdata.npz')
@@ -458,7 +507,7 @@ class Game(arcade.Window):
             layout.add(toggle_button)
 
             return layout
-        
+
         self.escape_buttons.add(_create_export_toggle(self, "Military Layer", "military_layer"))
         self.escape_buttons.add(_create_export_toggle(self, "Civilian Layer", "civilian_layer"))
         self.escape_buttons.add(_create_export_toggle(self, "Misc Layer 1", "misc1_layer"))
@@ -472,6 +521,7 @@ class Game(arcade.Window):
         self.escape_buttons.add(_create_export_toggle(self, "Q1 Temp", "q1_temperature_layer"))
         self.escape_buttons.add(_create_export_toggle(self, "Climate", "climate_layer"))
         self.escape_buttons.add(_create_export_toggle(self, "Biome", "biome_layer"))
+        self.escape_buttons.add(_create_export_toggle(self, "Upload to Cloud", "upload_to_cloud"))
 
         save_button = arcade.gui.UIFlatButton(width=256,height=64,text=f"Save to File")
         @save_button.event
@@ -730,8 +780,6 @@ class Game(arcade.Window):
                 select.text = selection_text
                 select.style = selected_style
                 self.on_notification_toast(f"selected temperature q{q} layer")
-
-        # this ddoesnt work ^^^
 
         _create_layer_toggle('climate_layer', layer_toggle_buttons, climate_layer_button_icon, 'climate_visibility')
         _create_layer_toggle('biome_layer', layer_toggle_buttons, geography_layer_button_icon, 'biome_visibility')
@@ -1024,6 +1072,7 @@ class Game(arcade.Window):
                         'country_id': icon.country_id,
                         'angle_rot': icon.angle_rot,
                         'quality': icon.quality,
+                        'decorator_ids': icon.decorator_ids,
                         'type': 'military'
                     })
 
@@ -1032,7 +1081,8 @@ class Game(arcade.Window):
 
         print("?- trying np.savez_compressed ...")
         timer = time.time()
-        np.savez_compressed(f"map_data/galaina_{time.localtime().tm_year}-{time.localtime().tm_mon}-{time.localtime().tm_mday}_{time.localtime().tm_hour}h_{time.localtime().tm_min}m_{time.localtime().tm_sec}s.npz",
+        filename = f"galaina_{time.localtime().tm_year}-{time.localtime().tm_mon}-{time.localtime().tm_mday}_{time.localtime().tm_hour}h_{time.localtime().tm_min}m_{time.localtime().tm_sec}s.npz"
+        np.savez_compressed(f"map_data/{filename}",
                             a=a_grid,
                             b=b_grid,
                             c=c_grid,
@@ -1065,8 +1115,14 @@ class Game(arcade.Window):
                             )
         time_taken = time.time()-timer
         self.on_notification_toast(f"O- map has been saved, took: {round(time_taken,3)} s")
-        # except Exception as e: 
-        #     self.on_notification_toast("Failed to save map ... "+str(e),error=True)
+        if self.export_flags["upload_to_cloud"]:
+            try:
+                self.on_notification_toast(f"O- uploading map to cloud ...",warn=True)
+                s3_client.upload_file(f"map_data/{filename}", "nationwide-galaina", filename)
+                self.on_notification_toast(f"O- map has been uploaded to cloud",success=True)
+            except Exception as e:
+                self.on_notification_toast(f"X- you cannot write to the cloud, check your server keys",error=True)
+                print(e)
 
     def find_element_near(self, x, y, elements, position_extractor=lambda elem: elem.position, radius=5):
         if not elements:
@@ -1096,11 +1152,15 @@ class Game(arcade.Window):
         
         for icon_list in icon_lists:
             for icon in icon_list:
-                dist = self.distance(clicked_point, (icon.center_x,icon.center_y))
-                if dist < closest_icon_distance:
-                    if dist <= radius:
+                if not isinstance(icon, nutil.Icon.Decorator):
+                    dist = self.distance(clicked_point, (icon.center_x, icon.center_y))
+                    if dist <= radius and dist < closest_icon_distance:
                         closest_icon = icon
+                        closest_icon_distance = dist
                         layer_name = icon_list
+
+        if closest_icon:
+            print(f"clicked: {clicked_point}, closest_icon: {closest_icon.position}, layer_name: {layer_name}")
 
         return closest_icon, layer_name
 
@@ -1135,6 +1195,7 @@ class Game(arcade.Window):
         for (loaded_data, corresponding_layer) in loaded_icon_layers:
             for icon in loaded_data['locations']:
                 icon_type = icon['type']
+                decorators_to_spawn = []
                 if icon_type == 'civilian':
                     icon_path = str(nutil.CIVILIAN_ICON_ID_MAP.get(icon['id'])) + ".png"
                     icon_object = nutil.Icon.Civilian(
@@ -1156,15 +1217,32 @@ class Game(arcade.Window):
                         icon['unique_id'],
                         icon['country_id'],
                         icon['angle_rot'],
-                        icon['quality']
+                        icon['quality'],
+                        icon['decorator_ids']
                     )
                     country_id = int(icon['country_id'])
+                    decorators_id_list = icon['decorator_ids']
                     if not country_id == 0:
                         icon_object.color = nutil.POLITICAL_ID_MAP.get(country_id,(255,255,255,255))
                     else:
                         icon_object.color = (255,255,255,255)
-                    
+
+                    for index, decorator_id in enumerate(decorators_id_list):
+                        texture_path = arcade.load_texture(str(nutil.DECORATOR_ICON_ID_MAP.get(decorator_id)) + ".png")
+                        decorator_object = nutil.Icon.Decorator(
+                            path_or_texture=texture_path,
+                            scale=1,
+                            center=(icon['x']+icon_object.width/2, icon['y']+index*2),
+                            icon_id=decorator_id,
+                            unique_id=random.randint(1000000, 9999999)
+                        )
+                        decorators_to_spawn.append(decorator_object)
+
                 corresponding_layer.add_icon(icon_object)
+                if decorators_to_spawn:
+                    for decorator in decorators_to_spawn:
+                        corresponding_layer.add_icon(decorator)
+                        icon_object.decorators.append(decorator)
 
         timer = time.time()
         north_upper_terrain_layer_data = self.upper_terrain_layer.grid.astype(np.uint8).tobytes()
@@ -1591,7 +1669,7 @@ class Game(arcade.Window):
             diff_fr_res = (SCREEN_SIZE[0]-self.resized_size[0])/2, (SCREEN_SIZE[1]-self.resized_size[1])/2
 
             # Conversion from screen coordinates to world coordinates
-            world_x = ((((x - self.width  / 2)-diff_fr_res[0]) / self.camera.zoom) + self.camera.position.x) 
+            world_x = ((((x - self.width  / 2)-diff_fr_res[0]) / self.camera.zoom) + self.camera.position.x)
             world_y = ((((y - self.height / 2)-diff_fr_res[1]) / self.camera.zoom) + self.camera.position.y)
             # x -> origin point changed to the center with '/2' -> zoom amount -> camera offset 
             self.last_pressed_world = (world_x, world_y)
@@ -1663,6 +1741,8 @@ class Game(arcade.Window):
                         down_button_icon            = arcade.load_texture("icons/down_icon.png")
                         change_nation_icon          = arcade.load_texture("icons/pol_palette_icon.png")
                         remove_nation_icon          = arcade.load_texture("icons/pol_remove_icon.png")
+                        choose_decorators_icon      = arcade.load_texture("icons/decorator_icon.png")
+                        reset_decorators_icon       = arcade.load_texture("icons/decorator_reset_icon.png")
 
                         if isinstance(nearby_icon,nutil.Icon.Military):
                             self.selected_icon_edit_box_label = self.selected_icon_edit_box.add(
@@ -1770,6 +1850,80 @@ class Game(arcade.Window):
                             anchor_y="center"
                         )
 
+                        choose_decorators_button = arcade.gui.UIFlatButton(text="", width=64, height=64)
+                        choose_decorators_button.add(
+                            child=arcade.gui.UIImage(
+                                texture=choose_decorators_icon,
+                                width =64,
+                                height=64,
+                            ),
+                            anchor_x="center",
+                            anchor_y="center"
+                        )
+
+                        reset_decorators_button = arcade.gui.UIFlatButton(text="", width=64, height=64)
+                        reset_decorators_button.add(
+                            child=arcade.gui.UIImage(
+                                texture=reset_decorators_icon,
+                                width =64,
+                                height=64,
+                            ),  
+                            anchor_x="center",
+                            anchor_y="center"
+                        )
+
+                        @reset_decorators_button.event
+                        def on_click(event: arcade.gui.UIOnClickEvent):
+                            for decorator in nearby_icon.decorators:
+                                icon_layer.remove(decorator)
+                                del decorator
+                            nearby_icon.decorators.clear()
+                            nearby_icon.decorator_ids.clear()
+                            self.on_notification_toast("O- wiped decorators", success=True)
+
+                        @choose_decorators_button.event
+                        def on_click(event: arcade.gui.UIOnClickEvent):
+                            decorators_menu = self.selected_icon_edit_box.add(
+                                child=arcade.gui.UIBoxLayout(
+                                    vertical=False,
+                                    space=2
+                                )
+                            )
+
+                            def create_decorator_button(decorator_id, layer:arcade.SpriteList, nearby_icon, function):
+                                sprite_layer = layer
+                                decorator_button = arcade.gui.UIFlatButton(text="", width=64, height=64)
+                                decorator_button.add(
+                                    child=arcade.gui.UIImage(
+                                        texture=arcade.load_texture(str(nutil.DECORATOR_ICON_ID_MAP[decorator_id]) + ".png"),
+                                        width=48,
+                                        height=48,
+                                    ),
+                                    anchor_x="center",
+                                    anchor_y="center"
+                                )
+
+                                @decorator_button.event
+                                def on_click(event: arcade.gui.UIOnClickEvent):
+                                    function(decorator_id=decorator_id, layer=sprite_layer, nearby_icon=nearby_icon)
+
+                                decorators_menu.add(decorator_button)
+
+                            for index, decorator_id in enumerate(nutil.DECORATOR_ICON_ID_MAP):
+                                def on_decorator_button_click(decorator_id, layer:arcade.SpriteList, nearby_icon):
+                                    decorator_object = nutil.Icon.Decorator(
+                                        path_or_texture=arcade.load_texture(str(nutil.DECORATOR_ICON_ID_MAP[decorator_id]) + ".png"),
+                                        scale=1,
+                                        center=(nearby_icon.center_x, nearby_icon.center_y),
+                                        icon_id=decorator_id,
+                                        unique_id=random.randint(1000000, 9999999)
+                                    )
+                                    nearby_icon.decorators.append(decorator_object)
+                                    nearby_icon.decorator_ids.append(decorator_id)
+                                    layer.append(decorator_object)
+
+                                create_decorator_button(decorator_id=decorator_id, layer=icon_layer, nearby_icon=nearby_icon, function=on_decorator_button_click)
+
                         @downgrade_button.event
                         def on_click(event: arcade.gui.UIOnClickEvent):
                             if nearby_icon.quality > 1:
@@ -1828,6 +1982,8 @@ class Game(arcade.Window):
                             self.selected_icon_edit_box_buttons.add(downgrade_button)
                             self.selected_icon_edit_box_buttons.add(nation_button)
                             self.selected_icon_edit_box_buttons.add(reset_nation_button)
+                            self.selected_icon_edit_box_buttons.add(choose_decorators_button)
+                            self.selected_icon_edit_box_buttons.add(reset_decorators_button)
                     else:
                         print("Found absolutely nothing in vicinity.") 
                         self.selected_world_icon = None
@@ -2010,6 +2166,9 @@ class Game(arcade.Window):
                 elif self.moving_the_icon == True:
                     if self.selected_world_icon:
                         self.selected_world_icon.position = (world_x,world_y)
+                        if self.selected_world_icon.decorators:
+                            for index, decorator in enumerate(self.selected_world_icon.decorators):
+                                decorator.position = (world_x,world_y+(index+1)*2)
 
     def on_mouse_release(self, x, y, button, modifiers):
         if button is arcade.MOUSE_BUTTON_LEFT:

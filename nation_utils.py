@@ -74,6 +74,19 @@ class Icon:
             self.icon_id = icon_id
             self.unique_id = unique_id
 
+    class Decorator(arcade.BasicSprite):
+        """A decorator icon that floats above the attached icon."""
+        def __init__(self,
+                    path_or_texture:arcade.texture = None,
+                    scale:float = 1,
+                    center:tuple = (None,None),
+                    icon_id:int = 0,
+                    unique_id:int = 0,
+                    **kwargs):
+            super().__init__(path_or_texture, scale, center[0], center[1], **kwargs)
+            self.icon_id = icon_id
+            self.unique_id = unique_id
+
     class Military(arcade.Sprite):
         """A military icon that can be placed on the map.
         
@@ -99,6 +112,7 @@ class Icon:
                     country_id:int = 0,
                     angle_rot:float = 0,
                     quality:int = 1,
+                    decorator_ids:list = [],
                     **kwargs):
             super().__init__(path_or_texture, scale, center[0], center[1], angle, **kwargs)
             self.icon_id = icon_id
@@ -106,6 +120,8 @@ class Icon:
             self.country_id = country_id
             self.angle_rot = angle_rot
             self.quality = quality
+            self.decorator_ids = decorator_ids
+            self.decorators = []
 
 class Shape():
     """A class representing a shape made up of connected points.
@@ -535,12 +551,31 @@ CIVILIAN_ICON_ID_MAP = {
     2: "icons/structures/str_city",
     3: "icons/structures/str_metro",
     # ---
-    4: "icons/structures/str_progress_0",
-    5: "icons/structures/str_progress_1",
-    6: "icons/structures/str_progress_2",
-    7: "icons/structures/str_progress_3",
-    8: "icons/structures/str_progress_4",
-    9: "icons/structures/str_progress_5",
+    4: "icons/info/str_progress_0",
+    5: "icons/info/str_progress_1",
+    6: "icons/info/str_progress_2",
+    7: "icons/info/str_progress_3",
+    8: "icons/info/str_progress_4",
+    9: "icons/info/str_progress_5",
+}
+
+DECORATOR_ICON_ID_MAP = {
+    0: "icons/decorators/axe",
+    1: "icons/decorators/bow",
+    2: "icons/decorators/circle",
+    3: "icons/decorators/cube",
+    4: "icons/decorators/flintlock",
+    5: "icons/decorators/hammer",
+    6: "icons/decorators/hexagon",
+    7: "icons/decorators/lance",
+    8: "icons/decorators/mace",
+    9: "icons/decorators/musket",
+    10: "icons/decorators/octagon",
+    11: "icons/decorators/pentagon",
+    12: "icons/decorators/shield",
+    13: "icons/decorators/spear",
+    14: "icons/decorators/sword",
+    15: "icons/decorators/triangle"
 }
 
 MILITARY_ICON_ID_MAP = {
