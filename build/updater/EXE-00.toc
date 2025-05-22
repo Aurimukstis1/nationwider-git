@@ -275,7 +275,7 @@
  [],
  False,
  False,
- 1747915247,
+ 1747923661,
  [('run.exe',
    'C:\\Users\\Aurimas\\Desktop\\PROGRAMMING\\nationwider-git\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\run.exe',
    'EXECUTABLE')],

@@ -1,4 +1,3 @@
-import itertools
 import os
 import arcade
 import arcade.gui
@@ -58,7 +57,7 @@ class Game(arcade.Window):
         self.ui = arcade.gui.UIManager()
         self.ui.enable()
         self.camera                 = arcade.camera.Camera2D(); 
-        self.camera.position        = (0,0)
+        self.camera.position        = (12000/2,6000/2)
         self.camera_speed           = 0.0, 0.0
         self.zoomed_speed_mod_adder = 0.0
         self.zoomed_speed_mod       = 1.0
@@ -210,63 +209,94 @@ class Game(arcade.Window):
         self.keybinds_box = self.center_anchor.add(arcade.gui.UIBoxLayout(space_between=0), anchor_x="center", anchor_y="center")
         self.is_keybind_box_disabled = False
 
+        self.saves_box = self.center_anchor.add(arcade.gui.UIBoxLayout(space_between=4, vertical=True), anchor_x="center", anchor_y="center")
+        online_label = self.saves_box.add(arcade.gui.UILabel(text="Online Saves", font_size=24, align="center", height=8), anchor_x="center", anchor_y="center")
+        self.online_load_menu_box = self.saves_box.add(
+            arcade.gui.UIBoxLayout(vertical=False, space_between=2),
+            anchor_x="center",
+            anchor_y="center"
+        )
+        local_label = self.saves_box.add(arcade.gui.UILabel(text="Local Saves", font_size=24, align="center", height=8), anchor_x="center", anchor_y="center")
+        self.local_load_menu_box = self.saves_box.add(
+            arcade.gui.UIGridLayout(
+                column_count=5,
+                row_count=5,
+                vertical_spacing=2,
+                horizontal_spacing=2
+            ).with_background(color=arcade.types.Color(10,10,10,255)).with_border(color=arcade.types.Color(20,20,20,255)),
+            anchor_x="center",
+            anchor_y="center"
+        )
+        self.load_menu_toggle_button_wrapper = self.center_anchor.add(arcade.gui.UIBoxLayout(vertical=True, space_between=2), anchor_x="left", anchor_y="top")
+        self.load_menu_toggle_button = self.load_menu_toggle_button_wrapper.add(arcade.gui.UIFlatButton(text="Saves", width=64, height=64), anchor_x="left", anchor_y="top")
+        @self.load_menu_toggle_button.event
+        def on_click(event: arcade.gui.UIOnClickEvent):
+            self.saves_box.visible = not self.saves_box.visible
+
+        self.online_saves_reload_button = self.load_menu_toggle_button_wrapper.add(arcade.gui.UIFlatButton(text="Reload", width=64, height=64), anchor_x="center", anchor_y="top")
+        @self.online_saves_reload_button.event
+        def on_click(event: arcade.gui.UIOnClickEvent):
+            self.online_load_menu_box.clear()
+            online_savefiles = []
+            try:
+                nationwide_bucket = s3_resource.Bucket('nationwide-galaina')
+                for savefile_object in nationwide_bucket.objects.all():
+                    online_savefiles.append(savefile_object.key)
+            except:
+                print(f"X- {Exception}/nationwide-galaina saves not found")
+            if online_savefiles:
+                # only leave the last 3 savefiles, deal with it
+                online_savefiles = online_savefiles[-5:]
+                for i, savefile in enumerate(online_savefiles):
+                    savefile_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=2)
+                    savefile_button = arcade.gui.UIFlatButton(width=256,height=64,text=f"")
+                    savefile_wrapper.add(arcade.gui.UILabel(text=f"{savefile.split('\\')[-1]}", font_size=12, align="center", height=8))
+                    savefile_wrapper.add(savefile_button)
+                    self.online_load_menu_box.add(savefile_wrapper)
+
+                    @savefile_button.event
+                    def on_click(event: arcade.gui.UIOnClickEvent, savename=savefile, index=i):
+                        with open(f'local_data/temporary_downloaded_savefile.npz', 'wb') as writable_file:
+                            s3_client.download_fileobj('nationwide-galaina', savename, writable_file)
+                        self.on_clicked_load(f'local_data/temporary_downloaded_savefile.npz')
+                        os.remove(f'local_data/temporary_downloaded_savefile.npz')
+                        self.saves_box.visible = False
+
         online_savefiles = []
+        local_savefiles = []
+
         try:
             nationwide_bucket = s3_resource.Bucket('nationwide-galaina')
             for savefile_object in nationwide_bucket.objects.all():
                 online_savefiles.append(savefile_object.key)
         except:
-            print(f"X- {Exception}/nationwide-galaina bucket not found")
+            print(f"X- {Exception}/nationwide-galaina saves not found")
         if online_savefiles:
-            self.online_load_menu_box = self.center_anchor.add(
-                arcade.gui.UIGridLayout(
-                    column_count=5,
-                    row_count=5,
-                    vertical_spacing=2,
-                    horizontal_spacing=2
-                ),
-                anchor_x="center",
-                anchor_y="top"
-            )
-            # only leave the last 5 savefiles, deal with it
-            online_savefiles = online_savefiles[-5:]
+            # only leave the last 3 savefiles, deal with it
+            online_savefiles = online_savefiles[-3:]
             for i, savefile in enumerate(online_savefiles):
-                savefile_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=1)
-                savefile_button = arcade.gui.UIFlatButton(width=256,height=96,text=f"{savefile.split('\\')[-1]}")
-                savefile_wrapper.add(arcade.gui.UILabel(text=f"{savefile.split('\\')[-1]}", font_size=10, align="center", height=8))
+                savefile_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=2)
+                savefile_button = arcade.gui.UIFlatButton(width=256,height=64,text=f"")
+                savefile_wrapper.add(arcade.gui.UILabel(text=f"{savefile.split('\\')[-1]}", font_size=12, align="center", height=8))
                 savefile_wrapper.add(savefile_button)
-                self.online_load_menu_box.add(savefile_wrapper, i % 5, i // 5)
+                self.online_load_menu_box.add(savefile_wrapper)
 
                 @savefile_button.event
                 def on_click(event: arcade.gui.UIOnClickEvent, savename=savefile, index=i):
-                    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
                     with open(f'local_data/temporary_downloaded_savefile.npz', 'wb') as writable_file:
-                        s3.download_fileobj('nationwide-galaina', savename, writable_file)
+                        s3_client.download_fileobj('nationwide-galaina', savename, writable_file)
                     self.on_clicked_load(f'local_data/temporary_downloaded_savefile.npz')
                     os.remove(f'local_data/temporary_downloaded_savefile.npz')
-                    self.online_load_menu_box.visible = False
-                    self.online_load_menu_box.clear()
-                    self.load_menu_box.visible = False
-                    self.load_menu_box.clear()
+                    self.saves_box.visible = False
 
-        savefiles = nutil.get_all_files('map_data')
+        local_savefiles = nutil.get_all_files('map_data')
         attributes_data = nutil.get_attributes()
         self.is_keybind_box_disabled = attributes_data['keybinds_disable']
 
-        if savefiles:
+        if local_savefiles:
             # menu for savefiles, crazy i know
-            self.load_menu_box = self.center_anchor.add(
-                arcade.gui.UIGridLayout(
-                    column_count=5,
-                    row_count=5,
-                    vertical_spacing=1,
-                    horizontal_spacing=1
-                ).with_background(color=arcade.types.Color(10,10,10,255)).with_border(color=arcade.types.Color(20,20,20,255)),
-                anchor_x="center",
-                anchor_y="center"
-            )
-            for i, savefile in enumerate(savefiles):
-                savefile_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=1)
+            for i, savefile in enumerate(local_savefiles):
+                savefile_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=2)
                 savefile_button = arcade.gui.UIFlatButton(width=256,height=128,text=f"{savefile.split('\\')[-1]}")
                 savefile_wrapper.add(arcade.gui.UILabel(text=f"{savefile.split('\\')[-1]}", font_size=10, align="center", height=8))
                 savefile_wrapper.add(savefile_button)
@@ -282,15 +312,12 @@ class Game(arcade.Window):
                     )
                 except Exception as e:
                     print(f"X- failed to load thumbnail for {savefile}: {e}")
-                self.load_menu_box.add(savefile_wrapper, i % 5, i // 5)
+                self.local_load_menu_box.add(savefile_wrapper, i % 5, i // 5)
 
                 @savefile_button.event
                 def on_click(event: arcade.gui.UIOnClickEvent, savename=savefile, index=i):
                     self.on_clicked_load(savename)
-                    self.load_menu_box.visible = False
-                    self.load_menu_box.clear()
-                    self.online_load_menu_box.visible = False
-                    self.online_load_menu_box.clear()
+                    self.saves_box.visible = False
         else:
             print("I- NO MAPS WERE FOUND / LOADING DEFAULT ...")
             self.on_clicked_load('local_data/default_mapdata.npz')
@@ -418,9 +445,9 @@ class Game(arcade.Window):
         layer_toggle_buttons = layers_box.add(
             arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
         ).with_background(color=arcade.types.Color(0,0,0,100))
-        palette_toggle_buttons = layers_box.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
-        ).with_background(color=arcade.types.Color(0,0,0,100))
+        # palette_toggle_buttons = layers_box.add(
+        #     arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
+        # ).with_background(color=arcade.types.Color(0,0,0,100))
 
         self.hover_label = arcade.gui.UILabel(text="", font_size=12, align="center", width=32)
 
@@ -812,10 +839,10 @@ class Game(arcade.Window):
         def on_click(event: arcade.gui.UIOnClickEvent):
             show_only("temperature")
 
-        palette_toggle_buttons.add(temperature_palette_choice)
-        palette_toggle_buttons.add(climate_palette_choice)
-        palette_toggle_buttons.add(biome_palette_choice)
-        palette_toggle_buttons.add(political_palette_choice)
+        layer_toggle_buttons.add(temperature_palette_choice)
+        layer_toggle_buttons.add(climate_palette_choice)
+        layer_toggle_buttons.add(biome_palette_choice)
+        layer_toggle_buttons.add(political_palette_choice)
         # ---
 
     def on_notification_toast(self, message:str="", warn:bool=False, error:bool=False, success:bool=False) -> None:
@@ -850,6 +877,53 @@ class Game(arcade.Window):
         print(f"I[{time.localtime().tm_year}-{time.localtime().tm_mon}-{time.localtime().tm_mday},{time.localtime().tm_hour}h:{time.localtime().tm_min}m:{time.localtime().tm_sec}s/toast]- {message}")
 
     def on_clicked_load(self, filename: str):
+        if not hasattr(self, 'created_textures'):
+            self.created_textures = []
+        if hasattr(self, 'created_textures'):
+            for texture in self.created_textures:
+                print(f"I- deleted texture {texture}")
+                self.created_textures.remove(texture)
+            self.created_textures = []
+
+        self.misc1_information_layer = nutil.InformationLayer("misc1_layer")
+        self.misc2_information_layer = nutil.InformationLayer("misc2_layer")
+        self.misc3_information_layer = nutil.InformationLayer("misc3_layer")
+        self.misc4_information_layer = nutil.InformationLayer("misc4_layer")
+        self.military_information_layer = nutil.InformationLayer("military_layer")
+        self.civilian_information_layer = nutil.InformationLayer("civilian_layer")
+
+        self.political_layer        = nutil.GridLayer((600,300))
+        self.upper_terrain_layer    = nutil.GridLayer((600,300))
+        self.lower_terrain_layer    = nutil.GridLayer((12000,6000))
+
+        self.s_political_layer      = nutil.GridLayer((600,300))
+        self.s_upper_terrain_layer  = nutil.GridLayer((600,300))
+        self.s_lower_terrain_layer  = nutil.GridLayer((12000,6000))
+
+        self.north_climate_layer    = nutil.GridLayer((600,300))
+        self.south_climate_layer    = nutil.GridLayer((600,300))
+
+        self.north_temperature_layer_q1 = nutil.GridLayer((600,300))
+        self.south_temperature_layer_q1 = nutil.GridLayer((600,300))
+
+        self.north_temperature_layer_q2 = nutil.GridLayer((600,300))
+        self.south_temperature_layer_q2 = nutil.GridLayer((600,300))
+
+        self.north_temperature_layer_q3 = nutil.GridLayer((600,300))
+        self.south_temperature_layer_q3 = nutil.GridLayer((600,300))
+
+        self.north_temperature_layer_q4 = nutil.GridLayer((600,300))
+        self.south_temperature_layer_q4 = nutil.GridLayer((600,300))
+
+        self.information_layers = [
+            self.military_information_layer,
+            self.civilian_information_layer,
+            self.misc1_information_layer,
+            self.misc2_information_layer,
+            self.misc3_information_layer,
+            self.misc4_information_layer
+        ]
+
         loaded_data = np.load(filename,allow_pickle=True)
         print(f"I- loading {filename}")
         try:
@@ -1349,8 +1423,6 @@ class Game(arcade.Window):
             ('south_temperature_layer_q4_texture', (0,-6000), (600,300), palette_bytes['temperature'], south_temperature_layer_q4_data),
         ]
 
-        self.created_textures = []
-
         for attr_name, pos, size, colors, data in texture_configs:
             setattr(self, attr_name, _create_texture(pos, size, colors, data))
             self.created_textures.append(attr_name)
@@ -1385,26 +1457,27 @@ class Game(arcade.Window):
         def _create_keybind_label(text):
             return arcade.gui.UITextArea(
                 text=text,
-                width=200,
-                height=20,
+                width=256,
+                height=32,
                 font_size=10
             ).with_background(color=arcade.types.Color(10,10,10,255)).with_border(width=1,color=arcade.types.Color(30,30,30,255))
         
         if self.is_keybind_box_disabled == False:
             print("?- Loading keybind popup")
 
-            self.keybinds_box.add(_create_keybind_label("[ O ] - Editing mode"))
+            self.keybinds_box.add(_create_keybind_label("[ Q ] - Editing mode"))
+            self.keybinds_box.add(_create_keybind_label("[ E ] - Toggle icons menu"))
             self.keybinds_box.add(_create_keybind_label("[ Scroll ] - Scrool zoom"))
             self.keybinds_box.add(_create_keybind_label("[ + ] - Zoom in"))
             self.keybinds_box.add(_create_keybind_label("[ - ] - Zoom out"))
             self.keybinds_box.add(_create_keybind_label("[ RMB ] - Pan camera"))
-            self.keybinds_box.add(_create_keybind_label("[ LMB ] - Select/Place"))
+            self.keybinds_box.add(_create_keybind_label("[ LMB ] - Select/Place/Move/Rotate"))
             self.keybinds_box.add(_create_keybind_label("[ M ] - Toggle moving mode"))
             self.keybinds_box.add(_create_keybind_label("[ R ] - Toggle rotate mode"))
-            self.keybinds_box.add(_create_keybind_label("[ E ] - Toggle icons menu"))
-            self.keybinds_box.add(_create_keybind_label("[ G ] - Toggle grid"))
+            self.keybinds_box.add(_create_keybind_label("[ G ] - Toggle assist grid"))
+            self.keybinds_box.add(_create_keybind_label("[ ESC ] - Toggle export menu"))
 
-            close_keybinds_button = arcade.gui.UIFlatButton(width=200,height=20,text="Close").with_background(color=arcade.types.Color(25,25,25,255)).with_border(width=1,color=arcade.types.Color(30,30,30,255))
+            close_keybinds_button = arcade.gui.UIFlatButton(width=256,height=32,text="Close").with_background(color=arcade.types.Color(25,25,25,255)).with_border(width=1,color=arcade.types.Color(30,30,30,255))
             self.keybinds_box.add(close_keybinds_button)
 
             @close_keybinds_button.event
@@ -1412,7 +1485,7 @@ class Game(arcade.Window):
                 self.keybinds_box.clear()
                 self.keybinds_box.visible = False
 
-            toggle_keybinds_attribute = arcade.gui.UIFlatButton(width=200,height=20,text="Don't show again").with_background(color=arcade.types.Color(25,25,25,255)).with_border(width=1,color=arcade.types.Color(30,30,30,255))
+            toggle_keybinds_attribute = arcade.gui.UIFlatButton(width=256,height=32,text="Don't show again").with_background(color=arcade.types.Color(25,25,25,255)).with_border(width=1,color=arcade.types.Color(30,30,30,255))
             self.keybinds_box.add(toggle_keybinds_attribute)
 
             @toggle_keybinds_attribute.event
@@ -1533,7 +1606,10 @@ class Game(arcade.Window):
             else:
                 arcade.draw_circle_outline(self.current_position_world[0],self.current_position_world[1],2,(255,255,255,255),0.2,0,-1)
         
-        self.ui.draw()
+        try:
+            self.ui.draw()
+        except:
+            pass
 
     def on_key_press(self, symbol, modifier):
         if symbol   == arcade.key.W or symbol == arcade.key.UP:
@@ -1557,14 +1633,18 @@ class Game(arcade.Window):
             if self.rotating_the_icon == True:
                 self.rotating_the_icon = False
                 self.moving_the_icon = True
+                self.on_notification_toast(f"moving mode toggled {self.moving_the_icon}")
             else:
                 self.moving_the_icon = not self.moving_the_icon
+                self.on_notification_toast(f"moving mode toggled {self.moving_the_icon}")
         if symbol   == arcade.key.R:
             if self.moving_the_icon == True:
                 self.moving_the_icon = False
                 self.rotating_the_icon = True
+                self.on_notification_toast(f"rotating mode toggled {self.rotating_the_icon}")
             else:
                 self.rotating_the_icon = not self.rotating_the_icon
+                self.on_notification_toast(f"rotating mode toggled {self.rotating_the_icon}")
 
         if symbol   == arcade.key.E:
             if self.icon_box.visible == False:
