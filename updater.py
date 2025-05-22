@@ -15,4 +15,6 @@ def download_latest_release():
         print(f"Error: {e}")
     
 if __name__ == "__main__":
+    print("Checking for updates...")
     download_latest_release()
+    print("Downloaded new version.")
