@@ -445,21 +445,21 @@ class Game(arcade.Window):
         layer_toggle_buttons = layers_box.add(
             arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
         ).with_background(color=arcade.types.Color(0,0,0,100))
-        # palette_toggle_buttons = layers_box.add(
-        #     arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
-        # ).with_background(color=arcade.types.Color(0,0,0,100))
+        palette_toggle_buttons = layers_box.add(
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
+        ).with_background(color=arcade.types.Color(0,0,0,100))
 
         self.hover_label = arcade.gui.UILabel(text="", font_size=12, align="center", width=32)
 
         biome_palette_wrapper = self.bottom_anchor.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=1),
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1)),
             anchor_x="center",
             anchor_y="bottom"
         )
         biome_palette_wrapper.add(self.hover_label)
         biome_palette_buttons = biome_palette_wrapper.add(
             arcade.gui.UIBoxLayout(
-                vertical=False
+                vertical=False, size_hint=(None, 1)
                 ).with_background(color=arcade.types.Color(30,30,30,255)),
             anchor_x="center",
             anchor_y="bottom"
@@ -467,7 +467,7 @@ class Game(arcade.Window):
         biome_palette_buttons.visible = False
 
         country_palette_wrapper = self.bottom_anchor.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=1),
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1)),
             anchor_x="center",
             anchor_y="bottom"
         )
@@ -482,7 +482,7 @@ class Game(arcade.Window):
         country_palette_buttons.visible = False
 
         climate_palette_wrapper = self.bottom_anchor.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=1),
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1)),
             anchor_x="center",
             anchor_y="bottom"
         )
@@ -497,7 +497,7 @@ class Game(arcade.Window):
         climate_palette_buttons.visible = False
 
         temperature_palette_wrapper = self.bottom_anchor.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=1),
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1)),
             anchor_x="center",
             anchor_y="bottom"
         )
@@ -623,7 +623,7 @@ class Game(arcade.Window):
                 on_temperature_click
             )
 
-        biome_palette_choice = arcade.gui.UIFlatButton(text="", width=64, height=64, size_hint=(None, 1))
+        biome_palette_choice = arcade.gui.UIFlatButton(text="", width=64, height=64, size_hint=(None, 1), size_hint_min=(1,1))
         biome_palette_choice.add(
             child=arcade.gui.UIImage(
                 texture=geography_palette_button_icon,
@@ -634,7 +634,7 @@ class Game(arcade.Window):
             anchor_y="center"
         )
 
-        political_palette_choice = arcade.gui.UIFlatButton(text="", width=64, height=64, size_hint=(None, 1))
+        political_palette_choice = arcade.gui.UIFlatButton(text="", width=64, height=64, size_hint=(None, 1), size_hint_min=(1,1))
         political_palette_choice.add(
             child=arcade.gui.UIImage(
                 texture=political_palette_button_icon,
@@ -645,7 +645,7 @@ class Game(arcade.Window):
             anchor_y="center"
         )
 
-        climate_palette_choice = arcade.gui.UIFlatButton(text="", width=64, height=64, size_hint=(None, 1))
+        climate_palette_choice = arcade.gui.UIFlatButton(text="", width=64, height=64, size_hint=(None, 1), size_hint_min=(1,1))
         climate_palette_choice.add(
             child=arcade.gui.UIImage(
                 texture=climate_palette_button_icon,
@@ -656,7 +656,7 @@ class Game(arcade.Window):
             anchor_y="center"
         )
         
-        temperature_palette_choice = arcade.gui.UIFlatButton(text="", width=64, height=64, size_hint=(None, 1))
+        temperature_palette_choice = arcade.gui.UIFlatButton(text="", width=64, height=64, size_hint=(None, 1), size_hint_min=(1,1))
         temperature_palette_choice.add(
             child=arcade.gui.UIImage(
                 texture=temperature_palette_button_icon,
@@ -685,7 +685,7 @@ class Game(arcade.Window):
 
         def _create_layer_toggle(layer_name, layer_toggle_buttons, texture, visibility_attr):
             wrapper = layer_toggle_buttons.add(
-                arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
+                arcade.gui.UIBoxLayout(vertical=True, space_between=2)
             )
             buttons = wrapper.add(
                 arcade.gui.UIBoxLayout(vertical=False, space_between=2)
@@ -729,7 +729,7 @@ class Game(arcade.Window):
 
         def _create_information_layer_toggle(layer_prefix, layer_toggle_buttons):
             wrapper = layer_toggle_buttons.add(
-                arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(0, 1))
+                arcade.gui.UIBoxLayout(vertical=True, space_between=2)
             )
             buttons = wrapper.add(
                 arcade.gui.UIBoxLayout(vertical=False, space_between=2)
@@ -839,10 +839,10 @@ class Game(arcade.Window):
         def on_click(event: arcade.gui.UIOnClickEvent):
             show_only("temperature")
 
-        layer_toggle_buttons.add(temperature_palette_choice)
-        layer_toggle_buttons.add(climate_palette_choice)
-        layer_toggle_buttons.add(biome_palette_choice)
-        layer_toggle_buttons.add(political_palette_choice)
+        palette_toggle_buttons.add(temperature_palette_choice)
+        palette_toggle_buttons.add(climate_palette_choice)
+        palette_toggle_buttons.add(biome_palette_choice)
+        palette_toggle_buttons.add(political_palette_choice)
         # ---
 
     def on_notification_toast(self, message:str="", warn:bool=False, error:bool=False, success:bool=False) -> None:
@@ -1608,8 +1608,8 @@ class Game(arcade.Window):
         
         try:
             self.ui.draw()
-        except:
-            pass
+        except Exception as e:
+            print(e, "size_error")
 
     def on_key_press(self, symbol, modifier):
         if symbol   == arcade.key.W or symbol == arcade.key.UP:
