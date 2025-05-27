@@ -452,14 +452,14 @@ class Game(arcade.Window):
         self.hover_label = arcade.gui.UILabel(text="", font_size=12, align="center", width=32)
 
         biome_palette_wrapper = self.bottom_anchor.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1)),
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2),
             anchor_x="center",
             anchor_y="bottom"
         )
         biome_palette_wrapper.add(self.hover_label)
         biome_palette_buttons = biome_palette_wrapper.add(
             arcade.gui.UIBoxLayout(
-                vertical=False, size_hint=(None, 1)
+                vertical=False
                 ).with_background(color=arcade.types.Color(30,30,30,255)),
             anchor_x="center",
             anchor_y="bottom"
@@ -467,7 +467,7 @@ class Game(arcade.Window):
         biome_palette_buttons.visible = False
 
         country_palette_wrapper = self.bottom_anchor.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1)),
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2),
             anchor_x="center",
             anchor_y="bottom"
         )
@@ -482,7 +482,7 @@ class Game(arcade.Window):
         country_palette_buttons.visible = False
 
         climate_palette_wrapper = self.bottom_anchor.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1)),
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2),
             anchor_x="center",
             anchor_y="bottom"
         )
@@ -497,7 +497,7 @@ class Game(arcade.Window):
         climate_palette_buttons.visible = False
 
         temperature_palette_wrapper = self.bottom_anchor.add(
-            arcade.gui.UIBoxLayout(vertical=True, space_between=2, size_hint=(None, 1)),
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2),
             anchor_x="center",
             anchor_y="bottom"
         )
@@ -855,7 +855,7 @@ class Game(arcade.Window):
             error (bool): Whether to display an error toast.
             success (bool): Whether to display a success toast.
         """
-        toast = nutil.Toast(message, duration=2)
+        toast = nutil.Toast(message, duration=5)
 
         toast.update_font(
             font_color=arcade.uicolor.BLACK,
@@ -1988,7 +1988,7 @@ class Game(arcade.Window):
                                     function(decorator_id=decorator_id, layer=sprite_layer, nearby_icon=nearby_icon)
 
                                 decorators_menu.add(decorator_button)
-
+                            
                             for index, decorator_id in enumerate(nutil.DECORATOR_ICON_ID_MAP):
                                 def on_decorator_button_click(decorator_id, layer:arcade.SpriteList, nearby_icon):
                                     decorator_object = nutil.Icon.Decorator(
@@ -2036,6 +2036,9 @@ class Game(arcade.Window):
 
                         @remove_button.event
                         def on_click(event: arcade.gui.UIOnClickEvent):
+                            for decorator in nearby_icon.decorators:
+                                icon_layer.remove(decorator)
+                                del decorator
                             icon_layer.remove(nearby_icon)
                             self.selected_icon_edit_box.clear()
                             self.selected_world_icon = None
