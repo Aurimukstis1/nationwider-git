@@ -86,6 +86,7 @@ class Icon:
             super().__init__(path_or_texture, scale, center[0], center[1], **kwargs)
             self.icon_id = icon_id
             self.unique_id = unique_id
+            self.alpha = 155
 
     class Military(arcade.Sprite):
         """A military icon that can be placed on the map.
@@ -164,6 +165,9 @@ class InformationLayer():
 
     def remove_shape(self, shape:Shape):
         self.shapes.remove(shape)
+
+    def get_icons(self) -> list[arcade.Sprite | arcade.BasicSprite]:
+        return self.canvas
 
 class Toast(arcade.gui.UILabel):
     """A temporary notification label that automatically removes itself after a duration.

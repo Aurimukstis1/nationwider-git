@@ -1513,8 +1513,13 @@ class Game(arcade.Window):
         self.zoomed_speed_mod = min(self.zoomed_speed_mod, 2.0)
 
         for layer in self.information_layers:
-            for icon in layer.canvas:
-                icon.scale = max(1.0-(self.camera.zoom/3),0.05)
+            icons = layer.get_icons()
+            for icon in icons:
+                # icon.scale = max(1.0-(self.camera.zoom/3),0.05)
+                icon.scale = max(math.log(self.camera.zoom/3, 5)*-1,0.05)
+                if isinstance(icon,nutil.Icon.Military):
+                    icon.color = nutil.QUALITY_COLOR_MAP.get(icon.quality, (255,255,255,255))
+
 
     def on_draw(self):
         self.camera.use() 
@@ -1578,12 +1583,15 @@ class Game(arcade.Window):
                     if shape_object.shape:
                         arcade.draw_line_strip(shape_object.shape, color, 1.25)
 
-        self.misc1_information_layer.canvas.draw(pixelated=True)
-        self.misc2_information_layer.canvas.draw(pixelated=True)
-        self.misc3_information_layer.canvas.draw(pixelated=True)
-        self.misc4_information_layer.canvas.draw(pixelated=True)
-        self.civilian_information_layer.canvas.draw(pixelated=True)
-        self.military_information_layer.canvas.draw(pixelated=True)
+        # self.misc1_information_layer.canvas.draw(pixelated=True)
+        # self.misc2_information_layer.canvas.draw(pixelated=True)
+        # self.misc3_information_layer.canvas.draw(pixelated=True)
+        # self.misc4_information_layer.canvas.draw(pixelated=True)
+        # self.civilian_information_layer.canvas.draw(pixelated=True)
+        # self.military_information_layer.canvas.draw(pixelated=True)
+
+        for layer in self.information_layers:
+            layer.canvas.draw(pixelated=True)
 
         if self.current_shape:
             arcade.draw_line_strip(self.current_shape,(255,0,255,100),2)
@@ -1707,6 +1715,13 @@ class Game(arcade.Window):
             # wiping the data from the selected layer's fbo
             for attr_name in self.created_textures:
                 getattr(self, attr_name).clear()
+        if symbol == arcade.key.NUM_4:
+            for layer in self.information_layers:
+                for icon in layer.get_icons():
+                    if isinstance(icon,nutil.Icon.Military):
+                        if icon.icon_id <= 3:
+                            icon.quality = 5
+            self.on_notification_toast("all military icons have been upgraded to quality 5", success=True)
 
     def on_key_release(self, symbol, modifiers):
         if symbol == arcade.key.W or symbol == arcade.key.S or symbol == arcade.key.UP or symbol == arcade.key.DOWN:
