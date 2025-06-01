@@ -62,7 +62,7 @@ class Game(arcade.Window):
         self.zoomed_speed_mod_adder = 0.0
         self.zoomed_speed_mod       = 1.0
         self.zoom_speed             = 0.0
-        self.resized_size           = 1920, 1080
+        self.resized_size           = WIDTH, HEIGHT
 
         self.terrain_scene          = None
         self.last_pressed_screen    = None
@@ -753,7 +753,7 @@ class Game(arcade.Window):
             def on_click(event: arcade.gui.UIOnClickEvent):
                 layer__ = getattr(self, f'{layer_prefix}_information_layer').canvas
                 layer__.visible = not layer__.visible
-                self.visibility_flags[f'{layer_prefix}_visibility'] = not self.visibility_flags[f'{layer_prefix}_visibility']
+                self.visibility_flags[f'{layer_prefix}_layer'] = not self.visibility_flags[f'{layer_prefix}_layer']
 
             @select.event
             def on_click(event: arcade.gui.UIOnClickEvent):
@@ -1515,11 +1515,10 @@ class Game(arcade.Window):
         for layer in self.information_layers:
             icons = layer.get_icons()
             for icon in icons:
-                # icon.scale = max(1.0-(self.camera.zoom/3),0.05)
-                icon.scale = max(math.log(self.camera.zoom/3, 5)*-1,0.05)
+                icon.scale = max(1.0-(self.camera.zoom/3),0.05)
+                # icon.scale = max(math.log(self.camera.zoom/1, 5)*-1,0.05)
                 if isinstance(icon,nutil.Icon.Military):
                     icon.color = nutil.QUALITY_COLOR_MAP.get(icon.quality, (255,255,255,255))
-
 
     def on_draw(self):
         self.camera.use() 
@@ -1582,13 +1581,6 @@ class Game(arcade.Window):
                 for shape_object in shapes:
                     if shape_object.shape:
                         arcade.draw_line_strip(shape_object.shape, color, 1.25)
-
-        # self.misc1_information_layer.canvas.draw(pixelated=True)
-        # self.misc2_information_layer.canvas.draw(pixelated=True)
-        # self.misc3_information_layer.canvas.draw(pixelated=True)
-        # self.misc4_information_layer.canvas.draw(pixelated=True)
-        # self.civilian_information_layer.canvas.draw(pixelated=True)
-        # self.military_information_layer.canvas.draw(pixelated=True)
 
         for layer in self.information_layers:
             layer.canvas.draw(pixelated=True)
@@ -1653,7 +1645,6 @@ class Game(arcade.Window):
             else:
                 self.rotating_the_icon = not self.rotating_the_icon
                 self.on_notification_toast(f"rotating mode toggled {self.rotating_the_icon}")
-
         if symbol   == arcade.key.E:
             if self.icon_box.visible == False:
                 brushes = nutil.get_all_files('local_data/brushes')
@@ -1688,6 +1679,13 @@ class Game(arcade.Window):
                 self.zoom_speed = -0.01
         if symbol == arcade.key.EQUAL or symbol == arcade.key.NUM_ADD:
             self.zoom_speed = 0.01
+
+        if symbol == arcade.key.KEY_0:
+            self.zoomed_speed_mod += 0.1
+            self.on_notification_toast(f"zoomed speed mod: {self.zoomed_speed_mod}")
+        if symbol == arcade.key.KEY_9:
+            self.zoomed_speed_mod -= 0.1
+            self.on_notification_toast(f"zoomed speed mod: {self.zoomed_speed_mod}")
 
         # dev tools
         if symbol == arcade.key.NUM_7:
@@ -1761,11 +1759,11 @@ class Game(arcade.Window):
                 
         if button is arcade.MOUSE_BUTTON_LEFT:
             self.last_pressed_screen = (x, y)
-            diff_fr_res = (SCREEN_SIZE[0]-self.resized_size[0])/2, (SCREEN_SIZE[1]-self.resized_size[1])/2
+            #diff_fr_res = (SCREEN_SIZE[0]-self.resized_size[0])/2, (SCREEN_SIZE[1]-self.resized_size[1])/2
 
             # Conversion from screen coordinates to world coordinates
-            world_x = ((((x - self.width  / 2)-diff_fr_res[0]) / self.camera.zoom) + self.camera.position.x)
-            world_y = ((((y - self.height / 2)-diff_fr_res[1]) / self.camera.zoom) + self.camera.position.y)
+            world_x = ((((x - self.width  / 2)) / self.camera.zoom) + self.camera.position.x)
+            world_y = ((((y - self.height / 2)) / self.camera.zoom) + self.camera.position.y)
             # x -> origin point changed to the center with '/2' -> zoom amount -> camera offset 
             self.last_pressed_world = (world_x, world_y)
             tile_x = round(world_x / 20 - 0.5)
@@ -2096,10 +2094,10 @@ class Game(arcade.Window):
         if buttons is arcade.MOUSE_BUTTON_LEFT:
             self.current_position_screen = (x, y)
             camera_x, camera_y = camera.position
-            diff_fr_res = (SCREEN_SIZE[0]-self.resized_size[0])/2, (SCREEN_SIZE[1]-self.resized_size[1])/2
+            #diff_fr_res = (SCREEN_SIZE[0]-self.resized_size[0])/2, (SCREEN_SIZE[1]-self.resized_size[1])/2
             # Conversion from screen coordinates to world coordinates
-            world_x = ((((x - self.width  / 2)-diff_fr_res[0]) / self.camera.zoom) + camera_x) 
-            world_y = ((((y - self.height / 2)-diff_fr_res[1]) / self.camera.zoom) + camera_y)
+            world_x = ((((x - self.width  / 2)) / self.camera.zoom) + camera_x) 
+            world_y = ((((y - self.height / 2)) / self.camera.zoom) + camera_y)
             # x -> origin point changed to the center with '/2' -> zoom amount -> camera offset
             tile_x = round(world_x / 20 - 0.5)
             tile_y = round(world_y / 20 - 0.5)
@@ -2296,11 +2294,11 @@ class Game(arcade.Window):
         
     def on_mouse_motion(self, x, y, dx, dy):
         self.current_position_screen = (x, y)
-        diff_fr_res = (SCREEN_SIZE[0]-self.resized_size[0])/2, (SCREEN_SIZE[1]-self.resized_size[1])/2
+        #diff_fr_res = (SCREEN_SIZE[0]-self.resized_size[0])/2, (SCREEN_SIZE[1]-self.resized_size[1])/2
         
         # Conversion from screen coordinates to world coordinates
-        world_x = ((((x - self.width  / 2)-diff_fr_res[0]) / self.camera.zoom) + self.camera.position.x) 
-        world_y = ((((y - self.height / 2)-diff_fr_res[1]) / self.camera.zoom) + self.camera.position.y)
+        world_x = ((((x - self.width  / 2)) / self.camera.zoom) + self.camera.position.x) 
+        world_y = ((((y - self.height / 2)) / self.camera.zoom) + self.camera.position.y)
         # x -> origin point changed to the center with '/2' -> zoom amount -> camera offset 
         self.current_position_world = (world_x, world_y)
 
