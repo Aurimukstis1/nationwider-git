@@ -113,7 +113,7 @@ class Icon:
                     country_id:int = 0,
                     angle_rot:float = 0,
                     quality:int = 1,
-                    decorator_ids:list = [],
+                    decorator_ids:list = None,
                     **kwargs):
             super().__init__(path_or_texture, scale, center[0], center[1], angle, **kwargs)
             self.icon_id = icon_id
@@ -121,7 +121,8 @@ class Icon:
             self.country_id = country_id
             self.angle_rot = angle_rot
             self.quality = quality
-            self.decorator_ids = decorator_ids
+            self.decorator_ids = [] if decorator_ids is None else list(decorator_ids)
+            
             self.decorators = []
 
 class Shape():

@@ -63,6 +63,7 @@ class Game(arcade.Window):
         self.zoomed_speed_mod       = 1.0
         self.zoom_speed             = 0.0
         self.resized_size           = WIDTH, HEIGHT
+        self.global_key_mod         = False
 
         self.terrain_scene          = None
         self.last_pressed_screen    = None
@@ -89,6 +90,7 @@ class Game(arcade.Window):
         self.selected_layer:str     = None
 
         self.has_map_been_loaded    = False
+        self.multi_selection        = []
 
         self.political_layer        = nutil.GridLayer((600,300))
         self.upper_terrain_layer    = nutil.GridLayer((600,300))
@@ -1269,7 +1271,6 @@ class Game(arcade.Window):
         for (loaded_data, corresponding_layer) in loaded_icon_layers:
             for icon in loaded_data['locations']:
                 icon_type = icon['type']
-                decorators_to_spawn = []
                 if icon_type == 'civilian':
                     icon_path = str(nutil.CIVILIAN_ICON_ID_MAP.get(icon['id'])) + ".png"
                     icon_object = nutil.Icon.Civilian(
@@ -1295,28 +1296,32 @@ class Game(arcade.Window):
                         icon['decorator_ids']
                     )
                     country_id = int(icon['country_id'])
-                    decorators_id_list = icon['decorator_ids']
                     if not country_id == 0:
                         icon_object.color = nutil.POLITICAL_ID_MAP.get(country_id,(255,255,255,255))
                     else:
                         icon_object.color = (255,255,255,255)
+
+                    decorators_to_spawn = []
+                    decorators_id_list = icon['decorator_ids']
+                    print(decorators_id_list)
 
                     for index, decorator_id in enumerate(decorators_id_list):
                         texture_path = arcade.load_texture(str(nutil.DECORATOR_ICON_ID_MAP.get(decorator_id)) + ".png")
                         decorator_object = nutil.Icon.Decorator(
                             path_or_texture=texture_path,
                             scale=1,
-                            center=(icon['x']+icon_object.width/2, icon['y']+index*2),
+                            center=(icon['x'], icon['y']+2),
                             icon_id=decorator_id,
                             unique_id=random.randint(1000000, 9999999)
                         )
                         decorators_to_spawn.append(decorator_object)
 
+                    if decorators_to_spawn:
+                        for decorator in decorators_to_spawn:
+                            corresponding_layer.add_icon(decorator)
+                            icon_object.decorators.append(decorator)
+
                 corresponding_layer.add_icon(icon_object)
-                if decorators_to_spawn:
-                    for decorator in decorators_to_spawn:
-                        corresponding_layer.add_icon(decorator)
-                        icon_object.decorators.append(decorator)
 
         timer = time.time()
         north_upper_terrain_layer_data = self.upper_terrain_layer.grid.astype(np.uint8).tobytes()
@@ -1518,7 +1523,11 @@ class Game(arcade.Window):
                 icon.scale = max(1.0-(self.camera.zoom/3),0.05)
                 # icon.scale = max(math.log(self.camera.zoom/1, 5)*-1,0.05)
                 if isinstance(icon,nutil.Icon.Military):
-                    icon.color = nutil.QUALITY_COLOR_MAP.get(icon.quality, (255,255,255,255))
+                    #icon.color = nutil.QUALITY_COLOR_MAP.get(icon.quality, (255,255,255,255))
+                    if icon.country_id == 0:
+                        icon.color = (255,255,255,255)
+                    else:
+                        icon.color = nutil.POLITICAL_ID_MAP.get(icon.country_id, (255,255,255,255))
 
     def on_draw(self):
         self.camera.use() 
@@ -1720,6 +1729,33 @@ class Game(arcade.Window):
                         if icon.icon_id <= 3:
                             icon.quality = 5
             self.on_notification_toast("all military icons have been upgraded to quality 5", success=True)
+        if symbol == arcade.key.NUM_5:
+            for layer in self.information_layers:
+                for icon in layer.get_icons():
+                    if isinstance(icon,nutil.Icon.Military):
+                        if icon.decorators:
+                            for decorator in icon.decorators[1:]:
+                                layer.canvas.remove(decorator)
+                                icon.decorators.remove(decorator)
+                        if icon.decorator_ids:
+                            first_id = icon.decorator_ids[0]
+                            icon.decorator_ids = []
+                            icon.decorator_ids.append(first_id)
+            self.on_notification_toast("all military icons have been flattened to one decorator", success=True)
+        if symbol == arcade.key.NUM_6:
+            for layer in self.information_layers:
+                for icon in layer.get_icons():
+                    if isinstance(icon,nutil.Icon.Military):
+                        if icon.icon_id == 0 or icon.icon_id == 1 or icon.icon_id == 2 or icon.icon_id == 3:
+                            for decorator in icon.decorators:
+                                layer.canvas.remove(decorator)
+                            icon.decorators.clear()
+                            icon.decorator_ids.clear()
+            self.on_notification_toast("all military outposts have been cleared of decorators", success=True)
+
+        if symbol == arcade.key.LCTRL:
+            self.global_key_mod = True
+            self.on_notification_toast("control holding...")
 
     def on_key_release(self, symbol, modifiers):
         if symbol == arcade.key.W or symbol == arcade.key.S or symbol == arcade.key.UP or symbol == arcade.key.DOWN:
@@ -1731,6 +1767,10 @@ class Game(arcade.Window):
             self.zoom_speed = 0.0
         if symbol == arcade.key.MINUS or symbol == arcade.key.NUM_SUBTRACT:
             self.zoom_speed = 0.0
+
+        if symbol == arcade.key.LCTRL:
+            self.global_key_mod = False
+            self.on_notification_toast("control released...")
 
     def on_mouse_press(self, x, y, button, modifiers):
         layer_map = {
@@ -1813,6 +1853,8 @@ class Game(arcade.Window):
                             generated_unique_id:int = random.randrange(1000,9999)
                             icon = nutil.Icon.Military(icon_path,1,(world_x,world_y),0.0,self.selected_icon_id,generated_unique_id,0,0.0)
                             layer_map[self.selected_layer].add_icon(icon)
+                            if self.selected_country_id:
+                                icon.country_id = self.selected_country_id
 
                     layers_to_check = [
                         self.civilian_information_layer.canvas,
@@ -1822,7 +1864,13 @@ class Game(arcade.Window):
                         self.misc2_information_layer.canvas,
                         self.misc1_information_layer.canvas
                     ]
+
                     nearby_icon, icon_layer = self.find_closest_icon((world_x,world_y),24,layers_to_check)
+                    
+                    if self.global_key_mod == True:
+                        self.multi_selection.append((nearby_icon, icon_layer))
+                        print(f"multi_selection: {self.multi_selection}")
+
                     if nearby_icon:
                         self.selected_world_icon = nearby_icon
                         self.selected_icon_edit_box.clear()
@@ -1983,8 +2031,7 @@ class Game(arcade.Window):
                                 )
                             )
 
-                            def create_decorator_button(decorator_id, layer:arcade.SpriteList, nearby_icon, function):
-                                sprite_layer = layer
+                            def create_decorator_button(decorator_id:int, layer:arcade.SpriteList, nearby_icon:nutil.Icon.Military, function) -> arcade.gui.UIFlatButton:
                                 decorator_button = arcade.gui.UIFlatButton(text="", width=64, height=64)
                                 decorator_button.add(
                                     child=arcade.gui.UIImage(
@@ -1998,24 +2045,25 @@ class Game(arcade.Window):
 
                                 @decorator_button.event
                                 def on_click(event: arcade.gui.UIOnClickEvent):
-                                    function(decorator_id=decorator_id, layer=sprite_layer, nearby_icon=nearby_icon)
+                                    function(decorator_id=decorator_id, layer=layer, nearby_icon=nearby_icon)
 
-                                decorators_menu.add(decorator_button)
+                                return decorator_button
                             
-                            for index, decorator_id in enumerate(nutil.DECORATOR_ICON_ID_MAP):
-                                def on_decorator_button_click(decorator_id, layer:arcade.SpriteList, nearby_icon):
-                                    decorator_object = nutil.Icon.Decorator(
-                                        path_or_texture=arcade.load_texture(str(nutil.DECORATOR_ICON_ID_MAP[decorator_id]) + ".png"),
-                                        scale=1,
-                                        center=(nearby_icon.center_x, nearby_icon.center_y),
-                                        icon_id=decorator_id,
-                                        unique_id=random.randint(1000000, 9999999)
-                                    )
-                                    nearby_icon.decorators.append(decorator_object)
-                                    nearby_icon.decorator_ids.append(decorator_id)
-                                    layer.append(decorator_object)
-
-                                create_decorator_button(decorator_id=decorator_id, layer=icon_layer, nearby_icon=nearby_icon, function=on_decorator_button_click)
+                            def on_decorator_button_click(decorator_id:int, layer:arcade.SpriteList, nearby_icon:nutil.Icon.Military):
+                                decorator_object = nutil.Icon.Decorator(
+                                    path_or_texture=arcade.load_texture(str(nutil.DECORATOR_ICON_ID_MAP[decorator_id]) + ".png"),
+                                    scale=1,
+                                    center=(nearby_icon.center_x, nearby_icon.center_y+2),
+                                    icon_id=decorator_id,
+                                    unique_id=random.randint(1000000, 9999999)
+                                )
+                                nearby_icon.decorators.append(decorator_object)
+                                nearby_icon.decorator_ids.append(decorator_id)
+                                layer.append(decorator_object)
+                        
+                            for decorator_id in nutil.DECORATOR_ICON_ID_MAP:
+                                button = create_decorator_button(decorator_id=decorator_id, layer=icon_layer, nearby_icon=nearby_icon, function=on_decorator_button_click)
+                                decorators_menu.add(button)
 
                         @downgrade_button.event
                         def on_click(event: arcade.gui.UIOnClickEvent):
@@ -2084,6 +2132,7 @@ class Game(arcade.Window):
                         print("Found absolutely nothing in vicinity.") 
                         self.selected_world_icon = None
                         self.selected_icon_edit_box.clear()
+                        self.multi_selection.clear()
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         camera = self.camera
