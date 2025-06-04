@@ -245,7 +245,7 @@ class Game(arcade.Window):
                 for savefile_object in nationwide_bucket.objects.all():
                     online_savefiles.append(savefile_object.key)
             except:
-                print(f"X- {Exception}/nationwide-galaina saves not found")
+                print(f"X- nationwide-galaina saves not found")
             if online_savefiles:
                 # only leave the last 3 savefiles, deal with it
                 online_savefiles = online_savefiles[-5:]
@@ -272,7 +272,7 @@ class Game(arcade.Window):
             for savefile_object in nationwide_bucket.objects.all():
                 online_savefiles.append(savefile_object.key)
         except:
-            print(f"X- {Exception}/nationwide-galaina saves not found")
+            print(f"X- nationwide-galaina saves not found")
         if online_savefiles:
             # only leave the last 3 savefiles, deal with it
             online_savefiles = online_savefiles[-3:]
@@ -2097,9 +2097,10 @@ class Game(arcade.Window):
 
                         @remove_button.event
                         def on_click(event: arcade.gui.UIOnClickEvent):
-                            for decorator in nearby_icon.decorators:
-                                icon_layer.remove(decorator)
-                                del decorator
+                            if hasattr(nearby_icon, 'decorators'):
+                                for decorator in nearby_icon.decorators:
+                                    icon_layer.remove(decorator)
+                                    del decorator
                             icon_layer.remove(nearby_icon)
                             self.selected_icon_edit_box.clear()
                             self.selected_world_icon = None
