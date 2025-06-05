@@ -580,7 +580,14 @@ DECORATOR_ICON_ID_MAP = {
     12: "icons/decorators/shield",
     13: "icons/decorators/spear",
     14: "icons/decorators/sword",
-    15: "icons/decorators/triangle"
+    15: "icons/decorators/triangle",
+    # additionals
+    16: "icons/decorators/claymore",
+    17: "icons/decorators/falchion",
+    18: "icons/decorators/gladius",
+    19: "icons/decorators/jian",
+    20: "icons/decorators/longsword",
+    21: "icons/decorators/shortsword"
 }
 
 MILITARY_ICON_ID_MAP = {

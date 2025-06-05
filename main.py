@@ -6,6 +6,7 @@ import math
 import arcade.utils
 import numpy as np
 import random
+import requests
 import nation_utils as nutil
 import time
 import chunk_gpu as cgpu
@@ -845,9 +846,22 @@ class Game(arcade.Window):
         palette_toggle_buttons.add(climate_palette_choice)
         palette_toggle_buttons.add(biome_palette_choice)
         palette_toggle_buttons.add(political_palette_choice)
+
+        # checking update
+        try:
+            api_url = f"https://api.github.com/repos/Aurimukstis1/nationwider-git/releases/latest"
+            response = requests.get(api_url)
+            if response.status_code == 200:
+                data = response.json()
+                self.on_notification_toast(f"Latest release: {data['tag_name']}", warn=True, duration=10)
+                self.on_notification_toast(f"Reminder to make sure you've updated your install!", warn=True, duration=10)
+            else:
+                print(f"Failed to fetch release info. Status code: {response.status_code}")
+        except e as Exception:
+            print(e)
         # ---
 
-    def on_notification_toast(self, message:str="", warn:bool=False, error:bool=False, success:bool=False) -> None:
+    def on_notification_toast(self, message:str="", warn:bool=False, error:bool=False, success:bool=False, duration:int=5) -> None:
         """
         Displays a toast notification with the given message.
 
@@ -857,7 +871,7 @@ class Game(arcade.Window):
             error (bool): Whether to display an error toast.
             success (bool): Whether to display a success toast.
         """
-        toast = nutil.Toast(message, duration=5)
+        toast = nutil.Toast(message, duration=duration)
 
         toast.update_font(
             font_color=arcade.uicolor.BLACK,
