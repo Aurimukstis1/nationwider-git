@@ -1,18 +1,22 @@
-import os
 import arcade
 import arcade.gui
 import arcade.gui.widgets
-import math
 import arcade.utils
-import numpy as np
-import random
-import requests
-import nation_utils as nutil
+
+import os
+import math
 import time
-import chunk_gpu as cgpu
-import boto3
 import json
+import random
 from PIL import Image
+import numpy as np
+
+import nation_utils as nutil
+import chunk_utils as cgpu
+import network_utils
+
+import requests
+
 # display settings; ts pmo fr rn 
 WIDTH, HEIGHT = 1920, 1080
 SCREEN_SIZE = (WIDTH, HEIGHT)
@@ -39,17 +43,6 @@ if __name__ == "__main__":
         print("O- imagefiles found and loaded")
     except:
         print(f"X- {Exception}/imagefiles not found")
-
-try:
-    with open('local_data/server_keys.json', 'r') as f:
-        server_keys = json.load(f)
-        aws_access_key_id = server_keys['api_key']
-        aws_secret_access_key = server_keys['secret_key']
-
-    s3_client = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
-    s3_resource = boto3.resource('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
-except:
-    print(f"X- {Exception}/server_keys.json not found")
 
 class Game(arcade.Window):
     def __init__(self, width, height, title):
@@ -240,64 +233,62 @@ class Game(arcade.Window):
         @self.online_saves_reload_button.event
         def on_click(event: arcade.gui.UIOnClickEvent):
             self.online_load_menu_box.clear()
-            online_savefiles = []
-            try:
-                nationwide_bucket = s3_resource.Bucket('nationwide-galaina')
-                for savefile_object in nationwide_bucket.objects.all():
-                    online_savefiles.append(savefile_object.key)
-            except:
-                print(f"X- nationwide-galaina saves not found")
+            online_savefiles = network_utils.list_savefiles("nationwide-galaina", limit=5)
+
             if online_savefiles:
-                # only leave the last 3 savefiles, deal with it
-                online_savefiles = online_savefiles[-5:]
                 for i, savefile in enumerate(online_savefiles):
                     savefile_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=2)
-                    savefile_button = arcade.gui.UIFlatButton(width=256,height=64,text=f"")
-                    savefile_wrapper.add(arcade.gui.UILabel(text=f"{savefile.split('\\')[-1]}", font_size=12, align="center", height=8))
+                    savefile_button = arcade.gui.UIFlatButton(width=256, height=64, text="")
+                    savefile_wrapper.add(
+                        arcade.gui.UILabel(
+                            text=f"{savefile.split('/')[-1]}",
+                            font_size=12,
+                            align="center",
+                            height=8,
+                        )
+                    )
                     savefile_wrapper.add(savefile_button)
                     self.online_load_menu_box.add(savefile_wrapper)
 
                     @savefile_button.event
-                    def on_click(event: arcade.gui.UIOnClickEvent, savename=savefile, index=i):
-                        with open(f'local_data/temporary_downloaded_savefile.npz', 'wb') as writable_file:
-                            s3_client.download_fileobj('nationwide-galaina', savename, writable_file)
-                        self.on_clicked_load(f'local_data/temporary_downloaded_savefile.npz')
-                        os.remove(f'local_data/temporary_downloaded_savefile.npz')
-                        self.saves_box.visible = False
+                    def on_click(event, savename=savefile, index=i):
+                        temp_path = "local_data/temporary_downloaded_savefile.npz"
+                        if network_utils.download_savefile("nationwide-galaina", savename, temp_path):
+                            self.on_clicked_load(temp_path)
+                            os.remove(temp_path)
+                            self.saves_box.visible = False
 
-        online_savefiles = []
-        local_savefiles = []
 
-        try:
-            nationwide_bucket = s3_resource.Bucket('nationwide-galaina')
-            for savefile_object in nationwide_bucket.objects.all():
-                online_savefiles.append(savefile_object.key)
-        except:
-            print(f"X- nationwide-galaina saves not found")
+        local_savefiles = nutil.find_files_simple('map_data')
+        online_savefiles = network_utils.list_savefiles("nationwide-galaina")
+
         if online_savefiles:
-            # only leave the last 3 savefiles, deal with it
-            online_savefiles = online_savefiles[-3:]
             for i, savefile in enumerate(online_savefiles):
                 savefile_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=2)
-                savefile_button = arcade.gui.UIFlatButton(width=256,height=64,text=f"")
-                savefile_wrapper.add(arcade.gui.UILabel(text=f"{savefile.split('\\')[-1]}", font_size=12, align="center", height=8))
+                savefile_button = arcade.gui.UIFlatButton(width=256, height=64, text="")
+                savefile_wrapper.add(
+                    arcade.gui.UILabel(
+                        text=f"{savefile.split('/')[-1]}",
+                        font_size=12,
+                        align="center",
+                        height=8,
+                    )
+                )
                 savefile_wrapper.add(savefile_button)
                 self.online_load_menu_box.add(savefile_wrapper)
 
                 @savefile_button.event
-                def on_click(event: arcade.gui.UIOnClickEvent, savename=savefile, index=i):
-                    with open(f'local_data/temporary_downloaded_savefile.npz', 'wb') as writable_file:
-                        s3_client.download_fileobj('nationwide-galaina', savename, writable_file)
-                    self.on_clicked_load(f'local_data/temporary_downloaded_savefile.npz')
-                    os.remove(f'local_data/temporary_downloaded_savefile.npz')
-                    self.saves_box.visible = False
+                def on_click(event, savename=savefile, index=i):
+                    temp_path = "local_data/temporary_downloaded_savefile.npz"
+                    if network_utils.download_savefile("nationwide-galaina", savename, temp_path):
+                        self.on_clicked_load(temp_path)
+                        os.remove(temp_path)
+                        self.saves_box.visible = False
 
-        local_savefiles = nutil.get_all_files('map_data')
         attributes_data = nutil.get_attributes()
         self.is_keybind_box_disabled = attributes_data['keybinds_disable']
 
         if local_savefiles:
-            # menu for savefiles, crazy i know
             for i, savefile in enumerate(local_savefiles):
                 savefile_wrapper = arcade.gui.UIBoxLayout(vertical=True, space_between=2)
                 savefile_button = arcade.gui.UIFlatButton(width=256,height=128,text=f"{savefile.split('\\')[-1]}")
@@ -848,17 +839,8 @@ class Game(arcade.Window):
         palette_toggle_buttons.add(political_palette_choice)
 
         # checking update
-        try:
-            api_url = f"https://api.github.com/repos/Aurimukstis1/nationwider-git/releases/latest"
-            response = requests.get(api_url)
-            if response.status_code == 200:
-                data = response.json()
-                self.on_notification_toast(f"Latest release: {data['tag_name']}", warn=True, duration=10)
-                self.on_notification_toast(f"Reminder to make sure you've updated your install!", warn=True, duration=10)
-            else:
-                print(f"Failed to fetch release info. Status code: {response.status_code}")
-        except e as Exception:
-            print(e)
+        self.on_notification_toast(f"Latest release: {network_utils._app_version}", warn=True, duration=10)
+        self.on_notification_toast(f"REMINDER to make sure you've updated your install!", warn=True, duration=10)
         # ---
 
     def on_notification_toast(self, message:str="", warn:bool=False, error:bool=False, success:bool=False, duration:int=5) -> None:
@@ -1206,13 +1188,19 @@ class Game(arcade.Window):
         time_taken = time.time()-timer
         self.on_notification_toast(f"O- map has been saved, took: {round(time_taken,3)} s")
         if self.export_flags["upload_to_cloud"]:
-            try:
-                self.on_notification_toast(f"O- uploading map to cloud ...",warn=True)
-                s3_client.upload_file(f"map_data/{filename}", "nationwide-galaina", filename)
-                self.on_notification_toast(f"O- map has been uploaded to cloud",success=True)
-            except Exception as e:
-                self.on_notification_toast(f"X- you cannot write to the cloud, check your server keys",error=True)
-                print(e)
+            self.on_notification_toast("I- uploading map to server ...", warn=True)
+            success = network_utils.upload_savefile(
+                "nationwide-galaina",
+                f"map_data/{filename}",
+                filename
+            )
+            if success:
+                self.on_notification_toast("O- map has been uploaded to server", success=True)
+            else:
+                self.on_notification_toast(
+                    "X- you cannot write to the server, check your server keys (Only hosts may upload)",
+                    error=True
+                )
 
     def find_element_near(self, x, y, elements, position_extractor=lambda elem: elem.position, radius=5):
         if not elements:
@@ -1670,7 +1658,7 @@ class Game(arcade.Window):
                 self.on_notification_toast(f"rotating mode toggled {self.rotating_the_icon}")
         if symbol   == arcade.key.E:
             if self.icon_box.visible == False:
-                brushes = nutil.get_all_files('local_data/brushes')
+                brushes = nutil.find_files_simple('local_data/brushes')
                 print(f"I- found {brushes.__len__()} brush files")
                 for idx, path in enumerate(brushes):
                     icon_texture = arcade.load_texture(path)

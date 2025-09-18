@@ -1,9 +1,11 @@
-# Nationwider-git (Galaina)
-### A mapping program for the "Galaina" nationwide community, created in the hopes of an alternative to "The powder toy".
+# Nationwider - Python
+## A map tool for the Licinius nationwide community
 
-Created using Arcade 3.2+ with Python 3.13.2
-Functionality for Amazon AWS s3 buckets for online save sharing
+Created in Python 3.13.7,
+Utilizing Arcade 3.2+ for *Graphics*
+Utilizing Amazon S3 for *Online Saving*
 
-*Note.* This version of the program is created for a specific use case within a nationwide game. 
-I will most likely create an alternative version that is more general use case and will have some extra features 
-that a more general nationwide community might use. This is, afterall, a proof of concept.
+*Note.* This program is the first proof-of-concept iteration of Nationwider, designed for specific use within the "Galaina" nationwide game hosted by Licinius/Minecrafttranquility, if you are not part of this community, you will most likely not find this project of any use and it's uses will most likely not work for you.
+
+A rewrite and redesign of this mapping tool is being done in C++ for more compatibility and better performance.
+Moreover, the redesign would give the ability for anyone to host their own nationwides, so feel free to check back to find out if the project is done.

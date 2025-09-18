@@ -220,11 +220,9 @@ class GridLayer():
         self.grid_size = grid_size
         self.grid = numpy.empty((grid_size[0], grid_size[1]), dtype=numpy.uint8)
     
-def get_all_files(directory: str) -> list[str]:
-    """Recursively get paths of all files in a directory and its subdirectories.
-
-    Walks through the directory tree starting at the given directory path and collects
-    the full paths of all files encountered.
+def find_files_simple(directory: str) -> list[str]:
+    """
+    Recursively get paths of all files in a specified directory.
 
     Args:
         directory (str): Path to the root directory to search
@@ -232,14 +230,25 @@ def get_all_files(directory: str) -> list[str]:
     Returns:
         list[str]: List of full file paths for all files found
     """
-    all_files = []
-    
+    return [
+        os.path.join(root, file)
+        for root, _, files in os.walk(directory)
+        for file in files
+    ]
+
+def find_files_iter(directory: str):
+    """
+    Recursively get paths of all files in a specified directory.
+
+    Args:
+        directory (str): Path to the root directory to search
+
+    Returns:
+        str: string generator yielding file paths for each file found
+    """
     for root, _, files in os.walk(directory):
         for file in files:
-            file_path = os.path.join(root, file)
-            all_files.append(file_path)
-            
-    return all_files
+            yield os.path.join(root, file)
 
 def get_attributes() -> dict:
     """Load and return attributes from the local attributes.json file.
@@ -760,4 +769,4 @@ CLIMATE_PALETTE = {
 }
 
 if __name__ == "__main__":
-    print("""nation-utils, custom python file for holding reused code for several files.""")
+    print("Utility functions and classes for map and nation management.\nAre you sure you ran the right file?")
