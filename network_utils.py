@@ -1,6 +1,5 @@
 import boto3
 import json
-from pathlib import Path
 from typing import Optional, List, Tuple
 import requests
 
@@ -18,10 +17,8 @@ _loaded_resource = None
 _app_version = None
 
 def load_aws_clients(keys_file="server_keys.json"):
-  keys_path = Path(keys_file)
-
   try:
-    with keys_path.open("r") as f:
+    with open(keys_file,"r") as f:
       server_key_file = json.load(f)
 
     aws_access_key_id = server_key_file["api_key"]
