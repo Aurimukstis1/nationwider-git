@@ -15,8 +15,6 @@ import nation_utils as nutil
 import chunk_utils as cgpu
 import network_utils
 
-import requests
-
 # display settings; ts pmo fr rn 
 WIDTH, HEIGHT = 1920, 1080
 SCREEN_SIZE = (WIDTH, HEIGHT)
@@ -40,9 +38,9 @@ if __name__ == "__main__":
 
         temperature_palette_button_icon = arcade.load_texture('icons/temperature_palette_button_icon.png')
 
-        print("O- imagefiles found and loaded")
+        print("O- images found and loaded")
     except:
-        print(f"X- {Exception}/imagefiles not found")
+        print(f"X- {Exception}")
 
 class Game(arcade.Window):
     def __init__(self, width, height, title):
@@ -205,10 +203,10 @@ class Game(arcade.Window):
         self.keybinds_box = self.center_anchor.add(arcade.gui.UIBoxLayout(space_between=0), anchor_x="center", anchor_y="center")
         self.is_keybind_box_disabled = False
 
-        self.saves_box = self.center_anchor.add(arcade.gui.UIBoxLayout(space_between=4, vertical=True), anchor_x="center", anchor_y="center")
+        self.saves_box = self.center_anchor.add(arcade.gui.UIBoxLayout(space_between=4, vertical=False), anchor_x="center", anchor_y="center")
         online_label = self.saves_box.add(arcade.gui.UILabel(text="Online Saves", font_size=24, align="center", height=8), anchor_x="center", anchor_y="center")
         self.online_load_menu_box = self.saves_box.add(
-            arcade.gui.UIBoxLayout(vertical=False, space_between=2),
+            arcade.gui.UIBoxLayout(vertical=True, space_between=2),
             anchor_x="center",
             anchor_y="center"
         )
@@ -1097,18 +1095,15 @@ class Game(arcade.Window):
             q4n_grid = np.frombuffer(self.north_temperature_layer_q4_texture.read(), dtype="u1")
             q4s_grid = np.frombuffer(self.north_temperature_layer_q4_texture.read(), dtype="u1")
 
-        def _create_shapes_dict(objects, use_shape_attr=True):
-            shapes_dict = {'shapes': []}
-            for obj in objects:
-                shapes_dict['shapes'].append(obj.shape if use_shape_attr else obj)
-            return shapes_dict
+        def create_shapes_dict(objects, use_shape_attribute=True):
+            return {"shapes": [obj.shape if use_shape_attribute else obj for obj in objects]}
 
-        civilian_lines_dict = _create_shapes_dict(self.civilian_information_layer.shapes) if self.export_flags["civilian_layer"] else None
-        military_lines_dict = _create_shapes_dict(self.military_information_layer.shapes) if self.export_flags["military_layer"] else None
-        misc_lines_1_dict = _create_shapes_dict(self.misc1_information_layer.shapes, False) if self.export_flags["misc1_layer"] else None
-        misc_lines_2_dict = _create_shapes_dict(self.misc2_information_layer.shapes, False) if self.export_flags["misc2_layer"] else None
-        misc_lines_3_dict = _create_shapes_dict(self.misc3_information_layer.shapes, False) if self.export_flags["misc3_layer"] else None 
-        misc_lines_4_dict = _create_shapes_dict(self.misc4_information_layer.shapes, False) if self.export_flags["misc4_layer"] else None
+        civilian_lines_dict = create_shapes_dict(self.civilian_information_layer.shapes) if self.export_flags["civilian_layer"] else None
+        military_lines_dict = create_shapes_dict(self.military_information_layer.shapes) if self.export_flags["military_layer"] else None
+        misc_lines_1_dict = create_shapes_dict(self.misc1_information_layer.shapes, False) if self.export_flags["misc1_layer"] else None
+        misc_lines_2_dict = create_shapes_dict(self.misc2_information_layer.shapes, False) if self.export_flags["misc2_layer"] else None
+        misc_lines_3_dict = create_shapes_dict(self.misc3_information_layer.shapes, False) if self.export_flags["misc3_layer"] else None 
+        misc_lines_4_dict = create_shapes_dict(self.misc4_information_layer.shapes, False) if self.export_flags["misc4_layer"] else None
 
         misc1_information_layer_icon_dict = {'locations': []}
         misc2_information_layer_icon_dict = {'locations': []}
@@ -1187,19 +1182,18 @@ class Game(arcade.Window):
                             )
         time_taken = time.time()-timer
         self.on_notification_toast(f"O- map has been saved, took: {round(time_taken,3)} s")
+
+        # Code section for uploading saves to the database (currently Amazon S3)
         if self.export_flags["upload_to_cloud"]:
-            self.on_notification_toast("I- uploading map to server ...", warn=True)
-            success = network_utils.upload_savefile(
-                "nationwide-galaina",
-                f"map_data/{filename}",
-                filename
-            )
+            self.on_notification_toast("I- uploading map to server ...")
+            success = network_utils.upload_savefile(filename)
             if success:
-                self.on_notification_toast("O- map has been uploaded to server", success=True)
+                self.on_notification_toast("O- map has been uploaded", 
+                success=True
+                )
             else:
-                self.on_notification_toast(
-                    "X- you cannot write to the server, check your server keys (Only hosts may upload)",
-                    error=True
+                self.on_notification_toast("X- cannot write to the server, check your server keys (Only hosts may upload)",
+                error=True
                 )
 
     def find_element_near(self, x, y, elements, position_extractor=lambda elem: elem.position, radius=5):
@@ -1348,7 +1342,7 @@ class Game(arcade.Window):
 
         north_temperature_layer_q4_data = self.north_temperature_layer_q4.grid.astype(np.uint8).tobytes()
         south_temperature_layer_q4_data = self.south_temperature_layer_q4.grid.astype(np.uint8).tobytes()
-        print(f"Data byte loader took {round(time.time()-timer,3)} s")
+        print(f"I- data byte loader took {round(time.time()-timer,3)} s")
 
         terrain_palette_data = []
         political_palette_data=[]
@@ -2355,8 +2349,8 @@ class Game(arcade.Window):
         self.current_position_world = (world_x, world_y)
 
 def main():
-    print("I- GAME INITIALIZING ...")
-    Game(WIDTH, HEIGHT, "NATIONWIDER")
+    print("I- Nationwider ...")
+    Game(WIDTH, HEIGHT, "Nationwider (Galaina)")
     arcade.run()
 
 if __name__ == "__main__":

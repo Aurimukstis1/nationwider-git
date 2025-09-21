@@ -25,7 +25,7 @@ def load_aws_clients(keys_file="server_keys.json"):
     aws_secret_access_key = server_key_file["secret_key"]
 
   except FileNotFoundError:
-    raise RuntimeError(f"X- Keys file not found: {keys_path.resolve()}")
+    raise RuntimeError(f"X- Keys file not found: {keys_file}")
   except json.JSONDecodeError:
     raise RuntimeError("X- Keys file is not valid JSON.")
   except KeyError as exc:
@@ -76,13 +76,16 @@ def download_savefile(bucket_name: str, key: str, local_path: str) -> bool:
 def upload_savefile(bucket_name: str, local_path: str, key: Optional[str] = None) -> bool:
     """Upload a file from local disk to the given S3 bucket."""
     try:
+        bucket_name = "nationwide-galaina"
+        local_path = f"map_data/{key}"
         s3_client, _ = _ensure_clients()
-        key = key or Path(local_path).name
+        key = key or local_path
         s3_client.upload_file(local_path, bucket_name, key)
         return True
     except Exception as exc:
         print(f"X- Failed to upload {local_path} to {bucket_name}/{key}: {exc}")
         return False
+
 
 try:
   api_url = f"https://api.github.com/repos/Aurimukstis1/nationwider-git/releases/latest"

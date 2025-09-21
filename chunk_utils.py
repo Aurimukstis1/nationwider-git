@@ -116,7 +116,8 @@ class ColorChunk:
         self._quad.render(self._program)
 
     def update_shader(self, time:float = 1.0):
-        """update variables in the chunk's shader"""
+        """Update variables in the chunk shader"""
+        # currently only time update
         self._program["time"] = time
         
     def get_image(self):

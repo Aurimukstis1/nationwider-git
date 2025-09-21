@@ -3,4 +3,4 @@
 *.db-shm
 *.db-wal
 *.pyc
-*.pyc
+__pycache__/nation_utils.cpython-313.pyc
